@@ -9,11 +9,37 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 
+interface TeacherCourse {
+  id: number;
+  title: string;
+  description: string;
+  students: number;
+  lessons: number;
+  progress: number;
+  status: string;
+  thumbnail: string;
+  duration: string;
+}
+
+interface StudentCourse {
+  id: number;
+  title: string;
+  description: string;
+  instructor: string;
+  progress: number;
+  lessons: number;
+  completedLessons: number;
+  status: string;
+  thumbnail: string;
+  rating: number;
+  nextLesson: string | null;
+}
+
 const Courses = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const teacherCourses = [
+  const teacherCourses: TeacherCourse[] = [
     {
       id: 1,
       title: 'Lập trình Web cơ bản',
@@ -60,7 +86,7 @@ const Courses = () => {
     }
   ];
 
-  const studentCourses = [
+  const studentCourses: StudentCourse[] = [
     {
       id: 1,
       title: 'Lập trình Web cơ bản',
@@ -102,8 +128,6 @@ const Courses = () => {
     }
   ];
 
-  const courses = user?.role === 'teacher' ? teacherCourses : studentCourses;
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -117,6 +141,8 @@ const Courses = () => {
         return <Badge>{status}</Badge>;
     }
   };
+
+  const courses = user?.role === 'teacher' ? teacherCourses : studentCourses;
 
   const filteredCourses = courses.filter(course =>
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -185,7 +211,7 @@ const Courses = () => {
                           <Users className="h-4 w-4 mr-1" />
                           Học sinh:
                         </span>
-                        <span className="font-medium">{course.students}</span>
+                        <span className="font-medium">{(course as TeacherCourse).students}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center text-gray-600">
@@ -199,21 +225,21 @@ const Courses = () => {
                           <Clock className="h-4 w-4 mr-1" />
                           Thời lượng:
                         </span>
-                        <span className="font-medium">{course.duration}</span>
+                        <span className="font-medium">{(course as TeacherCourse).duration}</span>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Giảng viên:</span>
-                        <span className="font-medium">{course.instructor}</span>
+                        <span className="font-medium">{(course as StudentCourse).instructor}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center text-gray-600">
                           <Star className="h-4 w-4 mr-1 text-yellow-500" />
                           Đánh giá:
                         </span>
-                        <span className="font-medium">{course.rating}/5</span>
+                        <span className="font-medium">{(course as StudentCourse).rating}/5</span>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
@@ -227,13 +253,13 @@ const Courses = () => {
                           ></div>
                         </div>
                         <div className="text-sm text-gray-600">
-                          {course.completedLessons}/{course.lessons} bài học
+                          {(course as StudentCourse).completedLessons}/{course.lessons} bài học
                         </div>
                       </div>
-                      {course.nextLesson && (
+                      {(course as StudentCourse).nextLesson && (
                         <div className="text-sm">
                           <span className="text-gray-600">Bài tiếp theo: </span>
-                          <span className="font-medium text-blue-600">{course.nextLesson}</span>
+                          <span className="font-medium text-blue-600">{(course as StudentCourse).nextLesson}</span>
                         </div>
                       )}
                     </>

@@ -8,11 +8,33 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 
+interface TeacherAssignment {
+  id: number;
+  title: string;
+  course: string;
+  dueDate: string;
+  submitted: number;
+  total: number;
+  status: string;
+  description: string;
+}
+
+interface StudentAssignment {
+  id: number;
+  title: string;
+  course: string;
+  dueDate: string;
+  submittedDate: string | null;
+  status: string;
+  grade: number | null;
+  description: string;
+}
+
 const Assignments = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const teacherAssignments = [
+  const teacherAssignments: TeacherAssignment[] = [
     {
       id: 1,
       title: 'Bài tập 1: Cơ bản HTML/CSS',
@@ -55,7 +77,7 @@ const Assignments = () => {
     }
   ];
 
-  const studentAssignments = [
+  const studentAssignments: StudentAssignment[] = [
     {
       id: 1,
       title: 'Bài tập 1: Cơ bản HTML/CSS',
@@ -88,9 +110,7 @@ const Assignments = () => {
     }
   ];
 
-  const assignments = user?.role === 'teacher' ? teacherAssignments : studentAssignments;
-
-  const getStatusBadge = (status: string, grade?: number) => {
+  const getStatusBadge = (status: string) => {
     if (user?.role === 'teacher') {
       switch (status) {
         case 'active':
@@ -141,6 +161,8 @@ const Assignments = () => {
       }
     }
   };
+
+  const assignments = user?.role === 'teacher' ? teacherAssignments : studentAssignments;
 
   const filteredAssignments = assignments.filter(assignment =>
     assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,7 +220,7 @@ const Assignments = () => {
                     {getStatusIcon(assignment.status)}
                     <CardTitle className="text-lg">{assignment.title}</CardTitle>
                   </div>
-                  {getStatusBadge(assignment.status, assignment.grade)}
+                  {getStatusBadge(assignment.status)}
                 </div>
                 <CardDescription className="flex items-center space-x-2">
                   <User className="h-4 w-4" />
@@ -221,21 +243,21 @@ const Assignments = () => {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Đã nộp:</span>
                       <span className="font-medium">
-                        {assignment.submitted}/{assignment.total}
+                        {(assignment as TeacherAssignment).submitted}/{(assignment as TeacherAssignment).total}
                       </span>
                     </div>
                   ) : (
                     <>
-                      {assignment.submittedDate && (
+                      {(assignment as StudentAssignment).submittedDate && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Ngày nộp:</span>
-                          <span className="font-medium">{assignment.submittedDate}</span>
+                          <span className="font-medium">{(assignment as StudentAssignment).submittedDate}</span>
                         </div>
                       )}
-                      {assignment.grade && (
+                      {(assignment as StudentAssignment).grade && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Điểm:</span>
-                          <span className="font-medium text-blue-600">{assignment.grade}/10</span>
+                          <span className="font-medium text-blue-600">{(assignment as StudentAssignment).grade}/10</span>
                         </div>
                       )}
                     </>
