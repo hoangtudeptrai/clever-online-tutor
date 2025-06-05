@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Search, Users, BookOpen, Clock, Star } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 
 interface TeacherCourse {
@@ -265,9 +265,14 @@ const Courses = () => {
                     </>
                   )}
 
-                  <Button variant="outline" size="sm" className="w-full">
-                    {user?.role === 'teacher' ? 'Quản lý khóa học' : 'Tiếp tục học'}
-                  </Button>
+                  <Link 
+                    to={`/dashboard/courses/${course.id}`}
+                    className="block"
+                  >
+                    <Button variant="outline" size="sm" className="w-full">
+                      {user?.role === 'teacher' ? 'Quản lý khóa học' : 'Tiếp tục học'}
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

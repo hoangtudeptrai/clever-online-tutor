@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Courses from "./pages/Courses";
+import CourseDetail from "./pages/CourseDetail";
 import Documents from "./pages/Documents";
 import Assignments from "./pages/Assignments";
 import Students from "./pages/Students";
@@ -51,10 +51,26 @@ const App = () => (
               } 
             />
             <Route 
+              path="/dashboard/courses/:courseId" 
+              element={
+                <ProtectedRoute>
+                  <CourseDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/dashboard/my-courses" 
               element={
                 <ProtectedRoute role="student">
                   <Courses />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/my-courses/:courseId" 
+              element={
+                <ProtectedRoute role="student">
+                  <CourseDetail />
                 </ProtectedRoute>
               } 
             />
