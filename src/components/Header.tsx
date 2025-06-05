@@ -2,9 +2,17 @@
 import { useState } from 'react';
 import { Menu, X, BookOpen, Users, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAuthAction = (action: 'login' | 'register') => {
+    navigate(`/${action}`);
+  };
 
   return (
     <header className="bg-white shadow-lg sticky top-0 z-50">
@@ -38,12 +46,27 @@ const Header = () => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-              Đăng nhập
-            </Button>
-            <Button className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900">
-              Đăng ký
-            </Button>
+            {user ? (
+              <Button onClick={() => navigate('/dashboard')} className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900">
+                Vào hệ thống
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  onClick={() => handleAuthAction('login')}
+                >
+                  Đăng nhập
+                </Button>
+                <Button 
+                  className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
+                  onClick={() => handleAuthAction('register')}
+                >
+                  Đăng ký
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -72,12 +95,27 @@ const Header = () => {
                 Liên hệ
               </a>
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                  Đăng nhập
-                </Button>
-                <Button className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900">
-                  Đăng ký
-                </Button>
+                {user ? (
+                  <Button onClick={() => navigate('/dashboard')} className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900">
+                    Vào hệ thống
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                      onClick={() => handleAuthAction('login')}
+                    >
+                      Đăng nhập
+                    </Button>
+                    <Button 
+                      className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
+                      onClick={() => handleAuthAction('register')}
+                    >
+                      Đăng ký
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
