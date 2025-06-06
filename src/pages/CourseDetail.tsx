@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Users, ClipboardList, BookOpen, Plus, Search, Calendar, User, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { ArrowLeft, Users, ClipboardList, BookOpen, Plus, Search, Calendar, User, CheckCircle, Clock, XCircle, Upload, FileText, Download, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,11 +32,23 @@ interface Student {
   status: string;
 }
 
+interface Document {
+  id: number;
+  title: string;
+  description: string;
+  fileName: string;
+  fileSize: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  fileType: string;
+}
+
 const CourseDetail = () => {
   const { courseId } = useParams();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Mock course data
   const course = {
@@ -101,6 +112,76 @@ const CourseDetail = () => {
       status: 'active'
     }
   ];
+
+  // Mock documents data for this course
+  const courseDocuments: Document[] = [
+    {
+      id: 1,
+      title: 'Giáo trình HTML CSS cơ bản',
+      description: 'Tài liệu hướng dẫn chi tiết về HTML và CSS',
+      fileName: 'html-css-co-ban.pdf',
+      fileSize: '2.5 MB',
+      uploadedBy: 'ThS. Nguyễn Văn A',
+      uploadedAt: '2025-01-05',
+      fileType: 'pdf'
+    },
+    {
+      id: 2,
+      title: 'Bài tập thực hành JavaScript',
+      description: 'Tổng hợp các bài tập JavaScript từ cơ bản đến nâng cao',
+      fileName: 'javascript-exercises.docx',
+      fileSize: '1.8 MB',
+      uploadedBy: 'ThS. Nguyễn Văn A',
+      uploadedAt: '2025-01-08',
+      fileType: 'docx'
+    },
+    {
+      id: 3,
+      title: 'Code mẫu dự án cuối khóa',
+      description: 'Source code tham khảo cho dự án cuối khóa',
+      fileName: 'project-template.zip',
+      fileSize: '5.2 MB',
+      uploadedBy: 'ThS. Nguyễn Văn A',
+      uploadedAt: '2025-01-12',
+      fileType: 'zip'
+    }
+  ];
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleFileUpload = () => {
+    if (selectedFile) {
+      // Thực hiện upload file logic ở đây
+      console.log('Uploading file:', selectedFile.name);
+      // Reset file selection
+      setSelectedFile(null);
+      // Reset input
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    switch (fileType.toLowerCase()) {
+      case 'pdf':
+        return <FileText className="h-5 w-5 text-red-600" />;
+      case 'docx':
+      case 'doc':
+        return <FileText className="h-5 w-5 text-blue-600" />;
+      case 'zip':
+      case 'rar':
+        return <FileText className="h-5 w-5 text-yellow-600" />;
+      default:
+        return <FileText className="h-5 w-5 text-gray-600" />;
+    }
+  };
 
   const getAssignmentStatusBadge = (status: string) => {
     if (user?.role === 'teacher') {
@@ -221,8 +302,9 @@ const CourseDetail = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${user?.role === 'teacher' ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+            <TabsTrigger value="documents">Tài liệu</TabsTrigger>
             <TabsTrigger value="assignments">Bài tập</TabsTrigger>
             {user?.role === 'teacher' && (
               <TabsTrigger value="students">Học sinh</TabsTrigger>
@@ -249,6 +331,16 @@ const CourseDetail = () => {
               
               <Card>
                 <CardHeader>
+                  <CardTitle className="text-lg">Tài liệu</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-purple-600">{courseDocuments.length}</div>
+                  <p className="text-sm text-gray-600">Tổng số tài liệu</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
                   <CardTitle className="text-lg">Bài tập</CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -256,18 +348,124 @@ const CourseDetail = () => {
                   <p className="text-sm text-gray-600">Tổng số bài tập</p>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
 
+          {/* Documents Tab */}
+          <TabsContent value="documents" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Tài liệu khóa học</h2>
               {user?.role === 'teacher' && (
-                <Card>
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.rar"
+                    />
+                    <label htmlFor="file-upload">
+                      <Button variant="outline" className="cursor-pointer" asChild>
+                        <span>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Chọn file
+                        </span>
+                      </Button>
+                    </label>
+                    {selectedFile && (
+                      <Button onClick={handleFileUpload} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tải lên
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {selectedFile && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">File đã chọn: {selectedFile.name}</p>
+                      <p className="text-sm text-gray-600">Kích thước: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedFile(null)}
+                      size="sm"
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Tìm kiếm tài liệu..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courseDocuments.map((document) => (
+                <Card key={document.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-lg">Học sinh</CardTitle>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-2">
+                        {getFileIcon(document.fileType)}
+                        <CardTitle className="text-lg">{document.title}</CardTitle>
+                      </div>
+                      {user?.role === 'teacher' && (
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <CardDescription>{document.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-purple-600">{course.students}</div>
-                    <p className="text-sm text-gray-600">Đã đăng ký</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Tên file:</span>
+                        <span className="font-medium">{document.fileName}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Kích thước:</span>
+                        <span className="font-medium">{document.fileSize}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Tải lên bởi:</span>
+                        <span className="font-medium">{document.uploadedBy}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center text-gray-600">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          Ngày tải:
+                        </span>
+                        <span className="font-medium">{document.uploadedAt}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t">
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Download className="h-4 w-4 mr-2" />
+                        Tải xuống
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              )}
+              ))}
             </div>
           </TabsContent>
 
