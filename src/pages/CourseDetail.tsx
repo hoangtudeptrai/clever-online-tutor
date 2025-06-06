@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Users, ClipboardList, BookOpen, Plus, Search, Calendar, User, CheckCircle, Clock, XCircle, Upload, FileText, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, ClipboardList, BookOpen, Plus, Search, Calendar, User, CheckCircle, Clock, XCircle, Upload, FileText, Download, Trash2, Paperclip } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,18 @@ interface Assignment {
   submitted?: number;
   total?: number;
   grade?: number | null;
+  documents?: AssignmentDocument[];
+}
+
+interface AssignmentDocument {
+  id: number;
+  title: string;
+  description: string;
+  fileName: string;
+  fileSize: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  fileType: string;
 }
 
 interface Student {
@@ -49,6 +61,8 @@ const CourseDetail = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedAssignmentFile, setSelectedAssignmentFile] = useState<File | null>(null);
+  const [expandedAssignment, setExpandedAssignment] = useState<number | null>(null);
 
   // Mock course data
   const course = {
@@ -63,6 +77,30 @@ const CourseDetail = () => {
     thumbnail: '/placeholder.svg'
   };
 
+  // Mock assignment documents
+  const assignmentDocuments: AssignmentDocument[] = [
+    {
+      id: 1,
+      title: 'Hướng dẫn HTML cơ bản',
+      description: 'Tài liệu hướng dẫn chi tiết về HTML',
+      fileName: 'html-guide.pdf',
+      fileSize: '1.2 MB',
+      uploadedBy: 'ThS. Nguyễn Văn A',
+      uploadedAt: '2025-04-01',
+      fileType: 'pdf'
+    },
+    {
+      id: 2,
+      title: 'Template CSS',
+      description: 'File template CSS mẫu',
+      fileName: 'template.css',
+      fileSize: '0.5 MB',
+      uploadedBy: 'ThS. Nguyễn Văn A',
+      uploadedAt: '2025-04-01',
+      fileType: 'css'
+    }
+  ];
+
   // Mock assignments data for this course
   const courseAssignments: Assignment[] = [
     {
@@ -74,7 +112,8 @@ const CourseDetail = () => {
       total: user?.role === 'teacher' ? 30 : undefined,
       status: user?.role === 'teacher' ? 'active' : 'submitted',
       submittedDate: user?.role === 'student' ? '2025-04-12' : undefined,
-      grade: user?.role === 'student' ? 9.0 : undefined
+      grade: user?.role === 'student' ? 9.0 : undefined,
+      documents: assignmentDocuments
     },
     {
       id: 2,
@@ -85,7 +124,8 @@ const CourseDetail = () => {
       total: user?.role === 'teacher' ? 30 : undefined,
       status: user?.role === 'teacher' ? 'active' : 'pending',
       submittedDate: user?.role === 'student' ? null : undefined,
-      grade: user?.role === 'student' ? null : undefined
+      grade: user?.role === 'student' ? null : undefined,
+      documents: []
     }
   ];
 
@@ -154,14 +194,35 @@ const CourseDetail = () => {
     }
   };
 
+  const handleAssignmentFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedAssignmentFile(file);
+    }
+  };
+
   const handleFileUpload = () => {
     if (selectedFile) {
       // Thực hiện upload file logic ở đây
-      console.log('Uploading file:', selectedFile.name);
+      console.log('Uploading course document:', selectedFile.name);
       // Reset file selection
       setSelectedFile(null);
       // Reset input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  };
+
+  const handleAssignmentFileUpload = (assignmentId: number) => {
+    if (selectedAssignmentFile) {
+      // Thực hiện upload assignment file logic ở đây
+      console.log('Uploading assignment document for assignment', assignmentId, ':', selectedAssignmentFile.name);
+      // Reset file selection
+      setSelectedAssignmentFile(null);
+      // Reset input
+      const fileInput = document.getElementById(`assignment-file-upload-${assignmentId}`) as HTMLInputElement;
       if (fileInput) {
         fileInput.value = '';
       }
@@ -178,6 +239,11 @@ const CourseDetail = () => {
       case 'zip':
       case 'rar':
         return <FileText className="h-5 w-5 text-yellow-600" />;
+      case 'css':
+        return <FileText className="h-5 w-5 text-purple-600" />;
+      case 'js':
+      case 'html':
+        return <FileText className="h-5 w-5 text-green-600" />;
       default:
         return <FileText className="h-5 w-5 text-gray-600" />;
     }
@@ -491,9 +557,9 @@ const CourseDetail = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-6">
               {courseAssignments.map((assignment) => (
-                <Card key={assignment.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-2">
@@ -506,7 +572,7 @@ const CourseDetail = () => {
                   <CardContent>
                     <p className="text-sm text-gray-600 mb-4">{assignment.description}</p>
                     
-                    <div className="space-y-3">
+                    <div className="space-y-3 mb-4">
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center text-gray-600">
                           <Calendar className="h-4 w-4 mr-1" />
@@ -537,6 +603,135 @@ const CourseDetail = () => {
                             </div>
                           )}
                         </>
+                      )}
+                    </div>
+
+                    {/* Assignment Documents Section */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <Paperclip className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Tài liệu đính kèm ({assignment.documents?.length || 0})
+                          </span>
+                        </div>
+                        {user?.role === 'teacher' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setExpandedAssignment(expandedAssignment === assignment.id ? null : assignment.id)}
+                          >
+                            {expandedAssignment === assignment.id ? 'Thu gọn' : 'Xem tài liệu'}
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Quick view of documents */}
+                      {assignment.documents && assignment.documents.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {assignment.documents.slice(0, 2).map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                              <div className="flex items-center space-x-2">
+                                {getFileIcon(doc.fileType)}
+                                <span className="text-sm font-medium">{doc.title}</span>
+                                <span className="text-xs text-gray-500">({doc.fileSize})</span>
+                              </div>
+                              <Button variant="ghost" size="sm">
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                          {assignment.documents.length > 2 && (
+                            <p className="text-xs text-gray-500">
+                              +{assignment.documents.length - 2} tài liệu khác
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Expanded documents view for teacher */}
+                      {user?.role === 'teacher' && expandedAssignment === assignment.id && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-medium">Quản lý tài liệu bài tập</h4>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                id={`assignment-file-upload-${assignment.id}`}
+                                type="file"
+                                onChange={handleAssignmentFileSelect}
+                                className="hidden"
+                                accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.rar,.css,.js,.html"
+                              />
+                              <label htmlFor={`assignment-file-upload-${assignment.id}`}>
+                                <Button variant="outline" size="sm" className="cursor-pointer" asChild>
+                                  <span>
+                                    <Upload className="h-3 w-3 mr-1" />
+                                    Chọn file
+                                  </span>
+                                </Button>
+                              </label>
+                              {selectedAssignmentFile && (
+                                <Button 
+                                  onClick={() => handleAssignmentFileUpload(assignment.id)} 
+                                  size="sm" 
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  Tải lên
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {selectedAssignmentFile && (
+                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium">File đã chọn: {selectedAssignmentFile.name}</p>
+                                  <p className="text-xs text-gray-600">
+                                    Kích thước: {(selectedAssignmentFile.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setSelectedAssignmentFile(null)}
+                                >
+                                  Hủy
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-3">
+                            {assignment.documents && assignment.documents.length > 0 ? (
+                              assignment.documents.map((doc) => (
+                                <div key={doc.id} className="flex items-center justify-between bg-white p-3 rounded border">
+                                  <div className="flex items-center space-x-3">
+                                    {getFileIcon(doc.fileType)}
+                                    <div>
+                                      <p className="font-medium text-sm">{doc.title}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {doc.fileName} • {doc.fileSize} • {doc.uploadedAt}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Button variant="ghost" size="sm">
+                                      <Download className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-gray-500 text-center py-4">
+                                Chưa có tài liệu nào được tải lên
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
 
