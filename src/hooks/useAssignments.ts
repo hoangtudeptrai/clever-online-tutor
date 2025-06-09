@@ -21,7 +21,7 @@ export interface Assignment {
     submitted_at: string;
     grade: number | null;
     status: 'pending' | 'submitted' | 'graded' | 'late';
-  };
+  }[];
   submissions_count?: number;
   total_students?: number;
 }
@@ -45,7 +45,7 @@ export const useAssignments = () => {
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        return data as Assignment[];
+        return data;
       } else {
         // Students see assignments from courses they're enrolled in with their submission status
         const { data, error } = await supabase
@@ -59,7 +59,7 @@ export const useAssignments = () => {
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        return data as Assignment[];
+        return data;
       }
     },
     enabled: !!user
@@ -72,27 +72,34 @@ export const useCourseAssignments = (courseId: string) => {
   return useQuery({
     queryKey: ['course-assignments', courseId, user?.id],
     queryFn: async () => {
-      let query = supabase
-        .from('assignments')
-        .select(`
-          *,
-          assignment_documents(*)
-        `)
-        .eq('course_id', courseId);
-
       if (user?.role === 'student') {
         // Include student's submission if they are a student
-        query = query.select(`
-          *,
-          assignment_documents(*),
-          submission:assignment_submissions(id, submitted_at, grade, status)
-        `);
+        const { data, error } = await supabase
+          .from('assignments')
+          .select(`
+            *,
+            assignment_documents(*),
+            submission:assignment_submissions(id, submitted_at, grade, status)
+          `)
+          .eq('course_id', courseId)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        return data;
+      } else {
+        // Teacher view without submission data
+        const { data, error } = await supabase
+          .from('assignments')
+          .select(`
+            *,
+            assignment_documents(*)
+          `)
+          .eq('course_id', courseId)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        return data;
       }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Assignment[];
     },
     enabled: !!courseId && !!user
   });
@@ -114,8 +121,7 @@ export const useAssignment = (assignmentId: string) => {
             submitted_at,
             grade,
             feedback,
-            status,
-            student:profiles(name, email)
+            status
           )
         `)
         .eq('id', assignmentId)
