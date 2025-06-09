@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus, Search, Filter, Calendar, User, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -265,14 +265,16 @@ const Assignments = () => {
                 </div>
 
                 <div className="mt-4 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                  >
-                    {user?.role === 'teacher' ? 'Xem chi tiết' : 
-                      assignment.status === 'pending' ? 'Nộp bài' : 'Xem chi tiết'}
-                  </Button>
+                  <Link to={`/dashboard/assignments/${assignment.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                    >
+                      {user?.role === 'teacher' ? 'Xem chi tiết' : 
+                        assignment.status === 'pending' ? 'Nộp bài' : 'Xem chi tiết'}
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
