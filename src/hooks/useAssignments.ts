@@ -21,7 +21,7 @@ export interface Assignment {
     submitted_at: string;
     grade: number | null;
     status: 'pending' | 'submitted' | 'graded' | 'late';
-  }[];
+  };
   submissions_count?: number;
   total_students?: number;
 }
@@ -45,7 +45,13 @@ export const useAssignments = () => {
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        return data;
+        
+        // Transform data to add submission counts
+        return data?.map(assignment => ({
+          ...assignment,
+          submissions_count: assignment.submissions?.length || 0,
+          total_students: 0 // This would need a separate query to get actual student count
+        })) || [];
       } else {
         // Students see assignments from courses they're enrolled in with their submission status
         const { data, error } = await supabase
@@ -53,13 +59,20 @@ export const useAssignments = () => {
           .select(`
             *,
             course:courses!inner(title),
-            submission:assignment_submissions(id, submitted_at, grade, status)
+            submissions:assignment_submissions(id, submitted_at, grade, status)
           `)
           .eq('course.course_enrollments.student_id', user.id)
+          .eq('submissions.student_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        return data;
+        
+        // Transform data to use single submission object for students
+        return data?.map(assignment => ({
+          ...assignment,
+          submission: assignment.submissions?.[0] || null,
+          submissions: undefined // Remove the array version
+        })) || [];
       }
     },
     enabled: !!user
@@ -79,13 +92,20 @@ export const useCourseAssignments = (courseId: string) => {
           .select(`
             *,
             assignment_documents(*),
-            submission:assignment_submissions(id, submitted_at, grade, status)
+            submissions:assignment_submissions(id, submitted_at, grade, status)
           `)
           .eq('course_id', courseId)
+          .eq('submissions.student_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        return data;
+        
+        // Transform data to use single submission object
+        return data?.map(assignment => ({
+          ...assignment,
+          submission: assignment.submissions?.[0] || null,
+          submissions: undefined
+        })) || [];
       } else {
         // Teacher view without submission data
         const { data, error } = await supabase
@@ -98,7 +118,7 @@ export const useCourseAssignments = (courseId: string) => {
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        return data;
+        return data || [];
       }
     },
     enabled: !!courseId && !!user
