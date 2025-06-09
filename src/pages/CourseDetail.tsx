@@ -1,19 +1,34 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import StudentsManagement from '@/components/StudentsManagement';
+import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
+import CreateDocumentDialog from '@/components/CreateDocumentDialog';
+import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
+import DocumentActionsMenu from '@/components/DocumentActionsMenu';
 import { Link } from 'react-router-dom';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
   const { user } = useAuth();
+  const [searchAssignments, setSearchAssignments] = useState('');
+  const [searchDocuments, setSearchDocuments] = useState('');
 
   // Mock data cho khóa học
   const course = {
@@ -30,6 +45,122 @@ const CourseDetail = () => {
     startDate: '2025-01-15',
     endDate: '2025-04-15'
   };
+
+  // Mock data cho bài tập của khóa học
+  const courseAssignments = [
+    {
+      id: 1,
+      title: 'Bài tập HTML cơ bản',
+      description: 'Tạo trang web đơn giản với HTML',
+      course: course.title,
+      dueDate: '2025-04-15',
+      maxGrade: 10,
+      submissions: 25,
+      status: 'active'
+    },
+    {
+      id: 2,
+      title: 'Thực hành CSS Flexbox',
+      description: 'Xây dựng layout responsive với Flexbox',
+      course: course.title,
+      dueDate: '2025-04-20',
+      maxGrade: 10,
+      submissions: 18,
+      status: 'active'
+    },
+    {
+      id: 3,
+      title: 'Dự án JavaScript',
+      description: 'Tạo ứng dụng web tương tác với JavaScript',
+      course: course.title,
+      dueDate: '2025-04-25',
+      maxGrade: 15,
+      submissions: 0,
+      status: 'draft'
+    }
+  ];
+
+  // Mock data cho tài liệu của khóa học
+  const courseDocuments = [
+    {
+      id: 1,
+      title: 'Giáo trình HTML cơ bản',
+      description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
+      category: 'Giáo trình',
+      course: course.title,
+      type: 'pdf',
+      size: '2.5 MB',
+      downloads: 245,
+      uploadDate: '2025-03-15'
+    },
+    {
+      id: 2,
+      title: 'Video bài giảng CSS',
+      description: 'Video hướng dẫn CSS cho người mới bắt đầu',
+      category: 'Video bài giảng',
+      course: course.title,
+      type: 'video',
+      size: '125 MB',
+      downloads: 189,
+      uploadDate: '2025-03-20'
+    },
+    {
+      id: 3,
+      title: 'Slide JavaScript ES6',
+      description: 'Slide trình bày về JavaScript ES6+',
+      category: 'Slide',
+      course: course.title,
+      type: 'pptx',
+      size: '8.2 MB',
+      downloads: 167,
+      uploadDate: '2025-03-25'
+    }
+  ];
+
+  const getStatusBadge = (status: string) => {
+    const colors = {
+      active: 'bg-green-100 text-green-800',
+      draft: 'bg-yellow-100 text-yellow-800',
+      completed: 'bg-blue-100 text-blue-800'
+    };
+    
+    const labels = {
+      active: 'Đang mở',
+      draft: 'Nháp',
+      completed: 'Hoàn thành'
+    };
+    
+    return (
+      <Badge className={colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+        {labels[status as keyof typeof labels] || status}
+      </Badge>
+    );
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'pdf':
+      case 'doc':
+      case 'docx':
+        return <FileText className="h-5 w-5 text-red-500" />;
+      case 'video':
+      case 'mp4':
+      case 'avi':
+        return <Eye className="h-5 w-5 text-purple-500" />;
+      default:
+        return <FileText className="h-5 w-5 text-blue-500" />;
+    }
+  };
+
+  const filteredAssignments = courseAssignments.filter(assignment =>
+    assignment.title.toLowerCase().includes(searchAssignments.toLowerCase()) ||
+    assignment.description.toLowerCase().includes(searchAssignments.toLowerCase())
+  );
+
+  const filteredDocuments = courseDocuments.filter(doc =>
+    doc.title.toLowerCase().includes(searchDocuments.toLowerCase()) ||
+    doc.category.toLowerCase().includes(searchDocuments.toLowerCase())
+  );
 
   return (
     <DashboardLayout>
@@ -138,10 +269,64 @@ const CourseDetail = () => {
             <TabsContent value="assignments" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Bài tập của khóa học</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Quản lý bài tập</CardTitle>
+                    <CreateAssignmentDialog />
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Danh sách bài tập trong khóa học này...</p>
+                <CardContent className="space-y-4">
+                  {/* Search */}
+                  <div className="flex items-center space-x-4">
+                    <Input
+                      placeholder="Tìm kiếm bài tập..."
+                      value={searchAssignments}
+                      onChange={(e) => setSearchAssignments(e.target.value)}
+                      className="max-w-sm"
+                    />
+                  </div>
+
+                  {/* Assignments Table */}
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tên bài tập</TableHead>
+                          <TableHead>Mô tả</TableHead>
+                          <TableHead>Hạn nộp</TableHead>
+                          <TableHead>Điểm tối đa</TableHead>
+                          <TableHead>Bài nộp</TableHead>
+                          <TableHead>Trạng thái</TableHead>
+                          <TableHead className="w-[100px]">Hành động</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAssignments.map((assignment) => (
+                          <TableRow key={assignment.id}>
+                            <TableCell className="font-medium">{assignment.title}</TableCell>
+                            <TableCell className="max-w-xs truncate">{assignment.description}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="h-4 w-4 text-gray-400" />
+                                <span>{assignment.dueDate}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{assignment.maxGrade} điểm</TableCell>
+                            <TableCell>{assignment.submissions}/{course.students}</TableCell>
+                            <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                            <TableCell>
+                              <AssignmentActionsMenu assignment={assignment} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {filteredAssignments.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      Không tìm thấy bài tập nào
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -149,10 +334,66 @@ const CourseDetail = () => {
             <TabsContent value="documents" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Tài liệu khóa học</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Quản lý tài liệu</CardTitle>
+                    <CreateDocumentDialog />
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Tài liệu liên quan đến khóa học...</p>
+                <CardContent className="space-y-4">
+                  {/* Search */}
+                  <div className="flex items-center space-x-4">
+                    <Input
+                      placeholder="Tìm kiếm tài liệu..."
+                      value={searchDocuments}
+                      onChange={(e) => setSearchDocuments(e.target.value)}
+                      className="max-w-sm"
+                    />
+                  </div>
+
+                  {/* Documents Table */}
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tên tài liệu</TableHead>
+                          <TableHead>Mô tả</TableHead>
+                          <TableHead>Danh mục</TableHead>
+                          <TableHead>Kích thước</TableHead>
+                          <TableHead>Lượt tải</TableHead>
+                          <TableHead>Ngày tải lên</TableHead>
+                          <TableHead className="w-[100px]">Hành động</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredDocuments.map((document) => (
+                          <TableRow key={document.id}>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                {getFileIcon(document.type)}
+                                <span className="font-medium">{document.title}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">{document.description}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{document.category}</Badge>
+                            </TableCell>
+                            <TableCell>{document.size}</TableCell>
+                            <TableCell>{document.downloads}</TableCell>
+                            <TableCell>{document.uploadDate}</TableCell>
+                            <TableCell>
+                              <DocumentActionsMenu document={document} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {filteredDocuments.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      Không tìm thấy tài liệu nào
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -179,10 +420,60 @@ const CourseDetail = () => {
             <TabsContent value="assignments" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Bài tập</CardTitle>
+                  <CardTitle>Bài tập của khóa học</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Bài tập được giao trong khóa học...</p>
+                <CardContent className="space-y-4">
+                  {/* Search */}
+                  <Input
+                    placeholder="Tìm kiếm bài tập..."
+                    value={searchAssignments}
+                    onChange={(e) => setSearchAssignments(e.target.value)}
+                    className="max-w-sm"
+                  />
+
+                  {/* Assignments Grid for Students */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredAssignments.filter(a => a.status === 'active').map((assignment) => (
+                      <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                            {getStatusBadge(assignment.status)}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-600 mb-4">{assignment.description}</p>
+                          
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Hạn nộp:</span>
+                              <span className="font-medium">{assignment.dueDate}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Điểm tối đa:</span>
+                              <span className="font-medium">{assignment.maxGrade} điểm</span>
+                            </div>
+                          </div>
+
+                          <div className="flex space-x-2 mt-4">
+                            <Button variant="outline" size="sm" className="flex-1">
+                              <Eye className="h-4 w-4 mr-1" />
+                              Xem chi tiết
+                            </Button>
+                            <Button size="sm" className="flex-1">
+                              Nộp bài
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {filteredAssignments.filter(a => a.status === 'active').length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      Không có bài tập nào được giao
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -192,8 +483,62 @@ const CourseDetail = () => {
                 <CardHeader>
                   <CardTitle>Tài liệu học tập</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Tài liệu tham khảo cho khóa học...</p>
+                <CardContent className="space-y-4">
+                  {/* Search */}
+                  <Input
+                    placeholder="Tìm kiếm tài liệu..."
+                    value={searchDocuments}
+                    onChange={(e) => setSearchDocuments(e.target.value)}
+                    className="max-w-sm"
+                  />
+
+                  {/* Documents Grid for Students */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredDocuments.map((document) => (
+                      <Card key={document.id} className="hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-2">
+                              {getFileIcon(document.type)}
+                              <CardTitle className="text-lg">{document.title}</CardTitle>
+                            </div>
+                            <Badge variant="outline">{document.category}</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-600 mb-4">{document.description}</p>
+                          
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Kích thước:</span>
+                              <span className="font-medium">{document.size}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Lượt tải:</span>
+                              <span className="font-medium">{document.downloads}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex space-x-2 mt-4">
+                            <Button variant="outline" size="sm" className="flex-1">
+                              <Eye className="h-4 w-4 mr-1" />
+                              Xem
+                            </Button>
+                            <Button size="sm" className="flex-1">
+                              <Download className="h-4 w-4 mr-1" />
+                              Tải xuống
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {filteredDocuments.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      Không có tài liệu nào
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
