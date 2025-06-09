@@ -43,13 +43,21 @@ const Register = () => {
       return;
     }
 
+    console.log(`
+      email : ${email}
+      password: ${password}
+      name: ${name}
+      role: ${role}
+      `);
+
     const success = await register(email, password, name, role);
+
     if (success) {
       toast({
         title: "Đăng ký thành công",
         description: "Chào mừng bạn đến với EduManage!",
       });
-      navigate('/dashboard');
+      // navigate('/login');
     } else {
       toast({
         title: "Đăng ký thất bại",
