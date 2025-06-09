@@ -16,12 +16,14 @@ export interface Assignment {
   course?: {
     title: string;
   };
+  // For students - single submission object
   submission?: {
     id: string;
     submitted_at: string;
     grade: number | null;
     status: 'pending' | 'submitted' | 'graded' | 'late';
-  };
+  } | null;
+  // For teachers - submission counts
   submissions_count?: number;
   total_students?: number;
 }
@@ -50,7 +52,8 @@ export const useAssignments = () => {
         return data?.map(assignment => ({
           ...assignment,
           submissions_count: assignment.submissions?.length || 0,
-          total_students: 0 // This would need a separate query to get actual student count
+          total_students: 0, // This would need a separate query to get actual student count
+          submission: undefined // Remove submission for teachers
         })) || [];
       } else {
         // Students see assignments from courses they're enrolled in with their submission status
@@ -59,7 +62,7 @@ export const useAssignments = () => {
           .select(`
             *,
             course:courses!inner(title),
-            submissions:assignment_submissions(id, submitted_at, grade, status)
+            submissions:assignment_submissions!inner(id, submitted_at, grade, status)
           `)
           .eq('course.course_enrollments.student_id', user.id)
           .eq('submissions.student_id', user.id)
@@ -71,7 +74,8 @@ export const useAssignments = () => {
         return data?.map(assignment => ({
           ...assignment,
           submission: assignment.submissions?.[0] || null,
-          submissions: undefined // Remove the array version
+          submissions_count: undefined, // Remove counts for students
+          total_students: undefined
         })) || [];
       }
     },
@@ -104,7 +108,8 @@ export const useCourseAssignments = (courseId: string) => {
         return data?.map(assignment => ({
           ...assignment,
           submission: assignment.submissions?.[0] || null,
-          submissions: undefined
+          submissions_count: undefined,
+          total_students: undefined
         })) || [];
       } else {
         // Teacher view without submission data
@@ -118,7 +123,12 @@ export const useCourseAssignments = (courseId: string) => {
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        return data || [];
+        return data?.map(assignment => ({
+          ...assignment,
+          submission: undefined,
+          submissions_count: 0,
+          total_students: 0
+        })) || [];
       }
     },
     enabled: !!courseId && !!user
