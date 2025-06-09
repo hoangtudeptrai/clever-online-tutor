@@ -1,12 +1,14 @@
 
 import React, { useState } from 'react';
-import { Plus, Search, Download, Eye, FileText, Video, Image, Upload } from 'lucide-react';
+import { Search, Download, Eye, FileText, Video, Image } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import CreateDocumentDialog from '@/components/CreateDocumentDialog';
+import DocumentActionsMenu from '@/components/DocumentActionsMenu';
 
 const Documents = () => {
   const { user } = useAuth();
@@ -139,12 +141,7 @@ const Documents = () => {
               }
             </p>
           </div>
-          {user?.role === 'teacher' && (
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Upload className="h-4 w-4 mr-2" />
-              Tải lên tài liệu
-            </Button>
-          )}
+          {user?.role === 'teacher' && <CreateDocumentDialog />}
         </div>
 
         {/* Search */}
@@ -196,7 +193,7 @@ const Documents = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <Upload className="h-8 w-8 text-orange-600" />
+                <FileText className="h-8 w-8 text-orange-600" />
                 <div>
                   <p className="text-2xl font-bold">156 MB</p>
                   <p className="text-sm text-gray-600">Dung lượng</p>
@@ -219,7 +216,12 @@ const Documents = () => {
                       <CardDescription>{doc.course}</CardDescription>
                     </div>
                   </div>
-                  {getTypeBadge(doc.type)}
+                  <div className="flex items-center space-x-2">
+                    {getTypeBadge(doc.type)}
+                    {user?.role === 'teacher' && (
+                      <DocumentActionsMenu document={doc} />
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -244,16 +246,18 @@ const Documents = () => {
                   </div>
                 </div>
 
-                <div className="flex space-x-2 mt-4">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Eye className="h-4 w-4 mr-1" />
-                    Xem
-                  </Button>
-                  <Button size="sm" className="flex-1">
-                    <Download className="h-4 w-4 mr-1" />
-                    Tải xuống
-                  </Button>
-                </div>
+                {user?.role === 'student' && (
+                  <div className="flex space-x-2 mt-4">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Eye className="h-4 w-4 mr-1" />
+                      Xem
+                    </Button>
+                    <Button size="sm" className="flex-1">
+                      <Download className="h-4 w-4 mr-1" />
+                      Tải xuống
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

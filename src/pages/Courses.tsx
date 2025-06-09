@@ -1,13 +1,15 @@
+
 import React, { useState } from 'react';
-import { Plus, Search, Users, BookOpen, Clock, Star } from 'lucide-react';
+import { Search, Users, BookOpen, Clock, Star } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
+import CreateCourseDialog from '@/components/CreateCourseDialog';
+import CourseActionsMenu from '@/components/CourseActionsMenu';
 
 interface TeacherCourse {
   id: number;
@@ -165,12 +167,7 @@ const Courses = () => {
               }
             </p>
           </div>
-          {user?.role === 'teacher' && (
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Tạo khóa học mới
-            </Button>
-          )}
+          {user?.role === 'teacher' && <CreateCourseDialog />}
         </div>
 
         {/* Search */}
@@ -198,7 +195,12 @@ const Courses = () => {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg">{course.title}</CardTitle>
-                  {getStatusBadge(course.status)}
+                  <div className="flex items-center space-x-2">
+                    {getStatusBadge(course.status)}
+                    {user?.role === 'teacher' && (
+                      <CourseActionsMenu course={course as TeacherCourse} />
+                    )}
+                  </div>
                 </div>
                 <CardDescription>{course.description}</CardDescription>
               </CardHeader>

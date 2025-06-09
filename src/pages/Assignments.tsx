@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, Calendar, User, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Search, Filter, Calendar, User, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
+import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
 
 interface TeacherAssignment {
   id: number;
@@ -185,12 +187,7 @@ const Assignments = () => {
               }
             </p>
           </div>
-          {user?.role === 'teacher' && (
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Tạo bài tập mới
-            </Button>
-          )}
+          {user?.role === 'teacher' && <CreateAssignmentDialog />}
         </div>
 
         {/* Search and Filter */}
@@ -220,7 +217,12 @@ const Assignments = () => {
                     {getStatusIcon(assignment.status)}
                     <CardTitle className="text-lg">{assignment.title}</CardTitle>
                   </div>
-                  {getStatusBadge(assignment.status)}
+                  <div className="flex items-center space-x-2">
+                    {getStatusBadge(assignment.status)}
+                    {user?.role === 'teacher' && (
+                      <AssignmentActionsMenu assignment={assignment} />
+                    )}
+                  </div>
                 </div>
                 <CardDescription className="flex items-center space-x-2">
                   <User className="h-4 w-4" />
