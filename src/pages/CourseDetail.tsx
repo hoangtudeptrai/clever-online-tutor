@@ -46,71 +46,80 @@ const CourseDetail = () => {
     endDate: '2025-04-15'
   };
 
-  // Mock data cho bài tập của khóa học
+  // Mock data cho bài tập của khóa học - updated to match interface
   const courseAssignments = [
     {
-      id: 1,
+      id: '1',
       title: 'Bài tập HTML cơ bản',
       description: 'Tạo trang web đơn giản với HTML',
-      course: course.title,
-      dueDate: '2025-04-15',
+      course: {
+        title: course.title
+      },
+      due_date: '2025-04-15',
       maxGrade: 10,
       submissions: 25,
       status: 'active'
     },
     {
-      id: 2,
+      id: '2',
       title: 'Thực hành CSS Flexbox',
       description: 'Xây dựng layout responsive với Flexbox',
-      course: course.title,
-      dueDate: '2025-04-20',
+      course: {
+        title: course.title
+      },
+      due_date: '2025-04-20',
       maxGrade: 10,
       submissions: 18,
       status: 'active'
     },
     {
-      id: 3,
+      id: '3',
       title: 'Dự án JavaScript',
       description: 'Tạo ứng dụng web tương tác với JavaScript',
-      course: course.title,
-      dueDate: '2025-04-25',
+      course: {
+        title: course.title
+      },
+      due_date: '2025-04-25',
       maxGrade: 15,
       submissions: 0,
       status: 'draft'
     }
   ];
 
-  // Mock data cho tài liệu của khóa học
+  // Mock data cho tài liệu của khóa học - updated to match interface
   const courseDocuments = [
     {
-      id: 1,
+      id: '1',
       title: 'Giáo trình HTML cơ bản',
       description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
-      category: 'Giáo trình',
-      course: course.title,
-      type: 'pdf',
+      file_type: 'pdf',
+      course: {
+        title: course.title
+      },
       size: '2.5 MB',
       downloads: 245,
       uploadDate: '2025-03-15'
     },
     {
-      id: 2,
+      id: '2',
       title: 'Video bài giảng CSS',
       description: 'Video hướng dẫn CSS cho người mới bắt đầu',
-      category: 'Video bài giảng',
-      course: course.title,
-      type: 'video',
+      file_type: 'video',
+      course: {
+        title: course.title
+      },
       size: '125 MB',
       downloads: 189,
       uploadDate: '2025-03-20'
     },
     {
-      id: 3,
+      id: '3',
       title: 'Slide JavaScript ES6',
       description: 'Slide trình bày về JavaScript ES6+',
-      category: 'Slide',
-      course: course.title,
-      type: 'pptx',
+      file_type: 'pptx',
+      course: {
+        title: course.title
+      },
       size: '8.2 MB',
       downloads: 167,
       uploadDate: '2025-03-25'
@@ -159,7 +168,7 @@ const CourseDetail = () => {
 
   const filteredDocuments = courseDocuments.filter(doc =>
     doc.title.toLowerCase().includes(searchDocuments.toLowerCase()) ||
-    doc.category.toLowerCase().includes(searchDocuments.toLowerCase())
+    doc.file_type.toLowerCase().includes(searchDocuments.toLowerCase())
   );
 
   return (
@@ -307,7 +316,7 @@ const CourseDetail = () => {
                             <TableCell>
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4 text-gray-400" />
-                                <span>{assignment.dueDate}</span>
+                                <span>{assignment.due_date}</span>
                               </div>
                             </TableCell>
                             <TableCell>{assignment.maxGrade} điểm</TableCell>
@@ -369,13 +378,13 @@ const CourseDetail = () => {
                           <TableRow key={document.id}>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                {getFileIcon(document.type)}
+                                {getFileIcon(document.file_type || '')}
                                 <span className="font-medium">{document.title}</span>
                               </div>
                             </TableCell>
                             <TableCell className="max-w-xs truncate">{document.description}</TableCell>
                             <TableCell>
-                              <Badge variant="outline">{document.category}</Badge>
+                              <Badge variant="outline">{document.file_type}</Badge>
                             </TableCell>
                             <TableCell>{document.size}</TableCell>
                             <TableCell>{document.downloads}</TableCell>
@@ -447,7 +456,7 @@ const CourseDetail = () => {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Hạn nộp:</span>
-                              <span className="font-medium">{assignment.dueDate}</span>
+                              <span className="font-medium">{assignment.due_date}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Điểm tối đa:</span>
@@ -499,10 +508,10 @@ const CourseDetail = () => {
                         <CardHeader>
                           <div className="flex items-start justify-between">
                             <div className="flex items-center space-x-2">
-                              {getFileIcon(document.type)}
+                              {getFileIcon(document.file_type || '')}
                               <CardTitle className="text-lg">{document.title}</CardTitle>
                             </div>
-                            <Badge variant="outline">{document.category}</Badge>
+                            <Badge variant="outline">{document.file_type}</Badge>
                           </div>
                         </CardHeader>
                         <CardContent>
