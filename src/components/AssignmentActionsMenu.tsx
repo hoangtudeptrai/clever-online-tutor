@@ -22,11 +22,13 @@ import EditAssignmentDialog from './EditAssignmentDialog';
 
 interface AssignmentActionsMenuProps {
   assignment: {
-    id: number;
+    id: string;
     title: string;
-    description: string;
-    course: string;
-    dueDate: string;
+    description?: string;
+    course?: {
+      title: string;
+    };
+    due_date?: string;
   };
 }
 
@@ -73,7 +75,13 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
       </DropdownMenu>
 
       <EditAssignmentDialog
-        assignment={assignment}
+        assignment={{
+          id: parseInt(assignment.id),
+          title: assignment.title,
+          description: assignment.description || '',
+          course: assignment.course?.title || '',
+          dueDate: assignment.due_date || ''
+        }}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />

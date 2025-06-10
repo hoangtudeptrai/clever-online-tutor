@@ -22,11 +22,13 @@ import EditDocumentDialog from './EditDocumentDialog';
 
 interface DocumentActionsMenuProps {
   document: {
-    id: number;
+    id: string;
     title: string;
-    description: string;
-    category: string;
-    course: string;
+    description?: string;
+    file_type?: string;
+    course?: {
+      title: string;
+    };
   };
 }
 
@@ -82,7 +84,13 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document }) =
       </DropdownMenu>
 
       <EditDocumentDialog
-        document={document}
+        document={{
+          id: parseInt(document.id),
+          title: document.title,
+          description: document.description || '',
+          category: document.file_type || 'document',
+          course: document.course?.title || ''
+        }}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />

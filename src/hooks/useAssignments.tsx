@@ -35,47 +35,59 @@ export const useAssignments = () => {
   return useQuery({
     queryKey: ['assignments', profile?.id, profile?.role],
     queryFn: async () => {
-      let query = supabase
-        .from('assignments')
-        .select(`
-          *,
-          course:courses(title),
-          instructor:profiles!assignments_created_by_fkey(full_name)
-        `);
+      let query;
 
       // If user is a student, also get their submissions
       if (profile?.role === 'student') {
-        query = supabase
+        const { data, error } = await supabase
           .from('assignments')
           .select(`
             *,
             course:courses(title),
             instructor:profiles!assignments_created_by_fkey(full_name),
             submission:assignment_submissions(id, status, grade, feedback, submitted_at)
-          `);
+          `)
+          .eq('assignment_submissions.student_id', profile.id);
+
+        if (error) {
+          console.error('Error fetching assignments:', error);
+          throw error;
+        }
+
+        // Transform the data to match our interface
+        const transformedData = data?.map(assignment => ({
+          ...assignment,
+          instructor: Array.isArray(assignment.instructor) ? assignment.instructor[0] : assignment.instructor,
+          course: Array.isArray(assignment.course) ? assignment.course[0] : assignment.course,
+          submission: Array.isArray(assignment.submission) ? assignment.submission[0] : assignment.submission
+        })) as Assignment[];
+
+        return transformedData;
+      } else {
+        // For tutors, get assignments they created
+        const { data, error } = await supabase
+          .from('assignments')
+          .select(`
+            *,
+            course:courses(title),
+            instructor:profiles!assignments_created_by_fkey(full_name)
+          `)
+          .eq('created_by', profile?.id);
+
+        if (error) {
+          console.error('Error fetching assignments:', error);
+          throw error;
+        }
+
+        // Transform the data to match our interface
+        const transformedData = data?.map(assignment => ({
+          ...assignment,
+          instructor: Array.isArray(assignment.instructor) ? assignment.instructor[0] : assignment.instructor,
+          course: Array.isArray(assignment.course) ? assignment.course[0] : assignment.course
+        })) as Assignment[];
+
+        return transformedData;
       }
-
-      // Filter based on user role
-      if (profile?.role === 'tutor') {
-        query = query.eq('created_by', profile.id);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching assignments:', error);
-        throw error;
-      }
-
-      // Transform the data to match our interface
-      const transformedData = data?.map(assignment => ({
-        ...assignment,
-        instructor: Array.isArray(assignment.instructor) ? assignment.instructor[0] : assignment.instructor,
-        course: Array.isArray(assignment.course) ? assignment.course[0] : assignment.course,
-        submission: Array.isArray(assignment.submission) ? assignment.submission[0] : assignment.submission
-      })) as Assignment[];
-
-      return transformedData;
     },
     enabled: !!profile,
   });

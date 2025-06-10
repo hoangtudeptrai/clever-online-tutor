@@ -22,11 +22,11 @@ import EditCourseDialog from './EditCourseDialog';
 
 interface CourseActionsMenuProps {
   course: {
-    id: number;
+    id: string;
     title: string;
-    description: string;
-    duration: string;
-    students: number;
+    description?: string;
+    duration?: string;
+    students_count: number;
   };
 }
 
@@ -64,7 +64,13 @@ const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course }) => {
       </DropdownMenu>
 
       <EditCourseDialog
-        course={course}
+        course={{
+          id: parseInt(course.id),
+          title: course.title,
+          description: course.description || '',
+          duration: course.duration || '',
+          students: course.students_count
+        }}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />
