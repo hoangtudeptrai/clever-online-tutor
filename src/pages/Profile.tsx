@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Edit, Save, Camera, Mail, Phone, MapPin, Calendar, Award, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,14 +11,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '0901234567',
-    address: 'Hà Nội, Việt Nam',
-    bio: 'Sinh viên ngành Công nghệ thông tin, đam mê lập trình web và mobile.',
+    name: profile?.full_name || '',
+    email: profile?.email || '',
+    phone: profile?.phone_number || '0901234567',
+    address: profile?.address || 'Hà Nội, Việt Nam',
+    bio: profile?.bio || 'Sinh viên ngành Công nghệ thông tin, đam mê lập trình web và mobile.',
     dateOfBirth: '1999-05-15',
     studentId: 'SV001'
   });
@@ -83,7 +82,7 @@ const Profile = () => {
                 <div className="flex items-center space-x-6 mb-6">
                   <div className="relative">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src="/placeholder.svg" alt={formData.name} />
+                      <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} alt={formData.name} />
                       <AvatarFallback className="text-xl">
                         {formData.name.charAt(0)}
                       </AvatarFallback>
@@ -99,8 +98,8 @@ const Profile = () => {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">{formData.name}</h3>
-                    <p className="text-gray-600">{user?.role === 'teacher' ? 'Giảng viên' : 'Học sinh'}</p>
-                    {user?.role === 'student' && (
+                    <p className="text-gray-600">{profile?.role === 'tutor' ? 'Giảng viên' : 'Học sinh'}</p>
+                    {profile?.role === 'student' && (
                       <p className="text-sm text-gray-500">Mã SV: {formData.studentId}</p>
                     )}
                   </div>
@@ -206,7 +205,7 @@ const Profile = () => {
             </Card>
 
             {/* Learning Progress (Student only) */}
-            {user?.role === 'student' && (
+            {profile?.role === 'student' && (
               <Card>
                 <CardHeader>
                   <CardTitle>Tiến độ học tập</CardTitle>
@@ -250,7 +249,7 @@ const Profile = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Learning Stats (Student only) */}
-            {user?.role === 'student' && (
+            {profile?.role === 'student' && (
               <Card>
                 <CardHeader>
                   <CardTitle>Thống kê học tập</CardTitle>

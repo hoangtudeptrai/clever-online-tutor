@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+
+type UserRole = 'student' | 'tutor';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -18,7 +20,8 @@ const Register = () => {
   const [role, setRole] = useState<UserRole>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -43,8 +46,9 @@ const Register = () => {
       return;
     }
 
-    const success = await register(email, password, name, role);
-    if (success) {
+    setIsLoading(true);
+    const { error } = await signUp(email, password, { fullName: name, role });
+    if (!error) {
       toast({
         title: "Đăng ký thành công",
         description: "Chào mừng bạn đến với EduManage!",
@@ -57,6 +61,7 @@ const Register = () => {
         variant: "destructive",
       });
     }
+    setIsLoading(false);
   };
 
   return (
@@ -149,8 +154,8 @@ const Register = () => {
                   <Label htmlFor="student">Học sinh</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="teacher" id="teacher" />
-                  <Label htmlFor="teacher">Giáo viên</Label>
+                  <RadioGroupItem value="tutor" id="tutor" />
+                  <Label htmlFor="tutor">Giáo viên</Label>
                 </div>
               </RadioGroup>
             </div>

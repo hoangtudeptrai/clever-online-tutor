@@ -27,7 +27,7 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -51,10 +51,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: User, label: 'Hồ sơ cá nhân', path: '/dashboard/profile' },
   ];
 
-  const menuItems = user?.role === 'teacher' ? teacherMenuItems : studentMenuItems;
+  const menuItems = profile?.role === 'tutor' ? teacherMenuItems : studentMenuItems;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
@@ -94,15 +94,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               </Button>
               <div className="flex items-center space-x-3">
                 <Avatar>
-                  <AvatarImage src={user?.avatar} alt={user?.name} />
+                  <AvatarImage src={profile?.avatar_url} alt={profile?.full_name} />
                   <AvatarFallback>
-                    {user?.name?.charAt(0) || 'U'}
+                    {profile?.full_name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                  <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
                   <p className="text-xs text-gray-600">
-                    {user?.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}
+                    {profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -130,8 +130,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           <nav className="mt-8 lg:mt-4">
             <div className="px-4 mb-4">
               <div className="flex items-center space-x-2 text-xs text-gray-500 uppercase tracking-wider">
-                {user?.role === 'teacher' ? <GraduationCap className="h-4 w-4" /> : <User className="h-4 w-4" />}
-                <span>{user?.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}</span>
+                {profile?.role === 'tutor' ? <GraduationCap className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                <span>{profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}</span>
               </div>
             </div>
             

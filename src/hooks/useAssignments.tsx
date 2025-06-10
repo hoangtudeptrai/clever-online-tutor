@@ -67,7 +67,15 @@ export const useAssignments = () => {
         throw error;
       }
 
-      return data as Assignment[];
+      // Transform the data to match our interface
+      const transformedData = data?.map(assignment => ({
+        ...assignment,
+        instructor: Array.isArray(assignment.instructor) ? assignment.instructor[0] : assignment.instructor,
+        course: Array.isArray(assignment.course) ? assignment.course[0] : assignment.course,
+        submission: Array.isArray(assignment.submission) ? assignment.submission[0] : assignment.submission
+      })) as Assignment[];
+
+      return transformedData;
     },
     enabled: !!profile,
   });

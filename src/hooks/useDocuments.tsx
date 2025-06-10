@@ -42,7 +42,14 @@ export const useDocuments = () => {
         throw error;
       }
 
-      return data as Document[];
+      // Transform the data to match our interface
+      const transformedData = data?.map(doc => ({
+        ...doc,
+        course: Array.isArray(doc.course) ? doc.course[0] : doc.course,
+        uploader: Array.isArray(doc.uploader) ? doc.uploader[0] : doc.uploader
+      })) as Document[];
+
+      return transformedData;
     },
     enabled: !!profile,
   });

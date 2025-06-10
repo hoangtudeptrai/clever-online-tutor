@@ -13,15 +13,17 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    const success = await login(email, password);
-    if (success) {
+    const { error } = await signIn(email, password);
+    if (!error) {
       toast({
         title: "Đăng nhập thành công",
         description: "Chào mừng bạn quay trở lại!",
@@ -34,6 +36,7 @@ const Login = () => {
         variant: "destructive",
       });
     }
+    setIsLoading(false);
   };
 
   return (

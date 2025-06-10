@@ -42,7 +42,13 @@ export const useCourses = () => {
         throw error;
       }
 
-      return data as Course[];
+      // Transform the data to match our interface
+      const transformedData = data?.map(course => ({
+        ...course,
+        instructor: Array.isArray(course.instructor) ? course.instructor[0] : course.instructor
+      })) as Course[];
+
+      return transformedData;
     },
     enabled: !!profile,
   });
