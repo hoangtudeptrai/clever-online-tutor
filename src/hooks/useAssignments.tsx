@@ -92,10 +92,17 @@ export const useAssignmentWithSubmissions = (assignmentId: string) => {
         throw error;
       }
 
-      return {
+      // Handle potential data structure issues
+      const processedData = {
         ...data,
-        creator: Array.isArray(data.creator) ? data.creator[0] : data.creator
-      } as Assignment;
+        creator: Array.isArray(data.creator) ? data.creator[0] : data.creator,
+        submissions: (data.submissions || []).map((submission: any) => ({
+          ...submission,
+          student: Array.isArray(submission.student) ? submission.student[0] : submission.student
+        }))
+      };
+
+      return processedData as Assignment;
     },
     enabled: !!assignmentId,
   });

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MoreVertical, Edit, Trash2, Eye, Play, Archive, Copy } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Eye, Play, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -151,7 +151,8 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
           title: assignment.title,
           description: assignment.description || '',
           course: assignment.course?.title || '',
-          dueDate: assignment.due_date || ''
+          dueDate: assignment.due_date || '',
+          maxScore: assignment.max_score || 100
         }}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
