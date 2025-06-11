@@ -34,7 +34,11 @@ export const useCourses = () => {
         const { data: coursesData, error } = await supabase
           .from('courses')
           .select('*')
-          .eq('instructor_id', profile.id);
+          .eq('instructor_id', profile.id)
+          // Sắp xếp: active trước, sau đó là draft và archived
+          // Trong cùng trạng thái thì sắp xếp theo thời gian tạo mới nhất
+          .order('status', { ascending: true }) // 'active' sẽ lên đầu vì theo thứ tự alphabet
+          .order('created_at', { ascending: false });
 
         if (error) {
           console.error('Error fetching tutor courses:', error);
@@ -57,11 +61,13 @@ export const useCourses = () => {
 
         return coursesWithInstructor as Course[];
       } else {
-        // Lấy khóa học cho học sinh (chỉ những khóa đã published)
+        // Lấy khóa học cho học sinh (chỉ những khóa active)
         const { data: coursesData, error } = await supabase
           .from('courses')
           .select('*')
-          .eq('status','active');
+          .eq('status', 'active')
+          // Sắp xếp theo thời gian tạo mới nhất
+          .order('created_at', { ascending: false });
 
         if (error) {
           console.error('Error fetching student courses:', error);
@@ -105,7 +111,7 @@ export const useCreateCourse = () => {
         .insert({
           ...courseData,
           instructor_id: profile?.id,
-          status: 'draft',
+          status: 'active',
         })
         .select()
         .single();
@@ -131,18 +137,32 @@ export const useUpdateCourse = () => {
       courseId: string; 
       updates: Partial<Course> 
     }) => {
+      // Validate status if it's being updated
+      if (updates.status && !['active', 'draft', 'archived'].includes(updates.status)) {
+        throw new Error('Invalid status value');
+      }
+
       const { data, error } = await supabase
         .from('courses')
-        .update(updates)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', courseId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating course:', error);
+        throw error;
+      }
+
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Invalidate both the specific course and the courses list
       queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['course', variables.courseId] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });

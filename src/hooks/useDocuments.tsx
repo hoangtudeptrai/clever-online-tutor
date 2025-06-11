@@ -19,6 +19,7 @@ export interface Document {
   };
   uploader?: {
     full_name: string;
+    email: string;
   };
 }
 
@@ -28,23 +29,39 @@ export const useDocuments = () => {
   return useQuery({
     queryKey: ['documents', profile?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Lấy tài liệu và join với bảng courses
+      const { data: documentsData, error: documentsError } = await supabase
         .from('course_documents')
         .select(`
           *,
           course:courses(title)
         `);
 
-      if (error) {
-        console.error('Error fetching documents:', error);
-        throw error;
+      if (documentsError) {
+        console.error('Error fetching documents:', documentsError);
+        throw documentsError;
       }
 
+      // Lấy thông tin người tạo từ bảng profiles
+      const uploaderIds = [...new Set(documentsData?.map(doc => doc.uploaded_by) || [])];
+      const { data: uploadersData, error: uploadersError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', uploaderIds);
+
+      if (uploadersError) {
+        console.error('Error fetching uploaders:', uploadersError);
+        throw uploadersError;
+      }
+
+      // Map uploaders data vào documents
+      const uploadersMap = new Map(uploadersData?.map(u => [u.id, u]));
+      
       // Transform the data to match our interface
-      const transformedData = data?.map(doc => ({
+      const transformedData = documentsData?.map(doc => ({
         ...doc,
         course: Array.isArray(doc.course) ? doc.course[0] : doc.course,
-        uploader: { full_name: 'Unknown' } // Default value for uploader
+        uploader: uploadersMap.get(doc.uploaded_by) || null
       })) as Document[];
 
       return transformedData;

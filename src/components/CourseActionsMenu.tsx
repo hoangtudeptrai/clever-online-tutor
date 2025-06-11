@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreVertical, Edit, Users, Trash2, Play, Archive } from 'lucide-react';
+import { MoreVertical, Edit, Users, Trash2, Play, Archive, Eye, EyeOff } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,13 +64,24 @@ const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course }) => {
     try {
       await updateCourse.mutateAsync({
         courseId: course.id,
-        updates: { status: newStatus }
+        updates: { 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        }
       });
+
+      const statusText = {
+        active: 'kích hoạt',
+        draft: 'ẩn',
+        archived: 'lưu trữ'
+      }[newStatus];
+
       toast({
         title: "Cập nhật trạng thái thành công",
-        description: `Khóa học "${course.title}" đã được ${newStatus === 'published' ? 'kích hoạt' : 'lưu trữ'}`,
+        description: `Khóa học "${course.title}" đã được ${statusText}`,
       });
     } catch (error) {
+      console.error('Error updating course status:', error);
       toast({
         title: "Lỗi",
         description: "Không thể cập nhật trạng thái khóa học. Vui lòng thử lại sau.",
@@ -83,41 +94,40 @@ const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course }) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" className="h-8 w-8 p-0">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-white">
+        <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
             <Edit className="h-4 w-4 mr-2" />
             Chỉnh sửa
           </DropdownMenuItem>
+          
           <DropdownMenuItem onClick={() => setShowStudentsDialog(true)}>
             <Users className="h-4 w-4 mr-2" />
             Quản lý học sinh
           </DropdownMenuItem>
-          
+
           <DropdownMenuSeparator />
-          
-          {course.status === 'draft' && (
-            <DropdownMenuItem onClick={() => handleUpdateStatus('published')}>
-              <Play className="h-4 w-4 mr-2" />
-              Kích hoạt khóa học
+
+          {course.status === 'active' ? (
+            <DropdownMenuItem onClick={() => handleUpdateStatus('draft')}>
+              <EyeOff className="h-4 w-4 mr-2" />
+              Ẩn khóa học
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => handleUpdateStatus('active')}>
+              <Eye className="h-4 w-4 mr-2" />
+              Hiện khóa học
             </DropdownMenuItem>
           )}
-          
-          {course.status === 'published' && (
-            <DropdownMenuItem onClick={() => handleUpdateStatus('archived')}>
-              <Archive className="h-4 w-4 mr-2" />
-              Lưu trữ
-            </DropdownMenuItem>
-          )}
-          
+
           <DropdownMenuSeparator />
           
           <DropdownMenuItem 
             onClick={() => setShowDeleteDialog(true)}
-            className="text-red-600 focus:text-red-600"
+            className="text-red-600"
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Xóa khóa học
@@ -143,13 +153,16 @@ const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course }) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa khóa học</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa khóa học "{course.title}"? 
-              Hành động này không thể hoàn tác và sẽ xóa tất cả dữ liệu liên quan đến khóa học này.
+              Bạn có chắc chắn muốn xóa khóa học này? 
+              Hành động này không thể hoàn tác và sẽ xóa tất cả dữ liệu liên quan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Xóa khóa học
             </AlertDialogAction>
           </AlertDialogFooter>

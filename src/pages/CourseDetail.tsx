@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,6 +22,27 @@ import CreateDocumentDialog from '@/components/CreateDocumentDialog';
 import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
 import DocumentActionsMenu from '@/components/DocumentActionsMenu';
 import { Link } from 'react-router-dom';
+
+interface Document {
+  id: string;
+  title: string;
+  description?: string;
+  file_name: string;
+  file_path: string;
+  file_size?: number;
+  file_type?: string;
+  course_id: string;
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+  course?: {
+    title: string;
+  };
+  uploader?: {
+    full_name: string;
+    email: string;
+  };
+}
 
 const CourseDetail = () => {
   const { courseId } = useParams();
@@ -85,43 +106,67 @@ const CourseDetail = () => {
     }
   ];
 
-  // Mock data cho tài liệu của khóa học - updated to match interface
-  const courseDocuments = [
+  // Mock data cho tài liệu của khóa học
+  const courseDocuments: Document[] = [
     {
       id: '1',
-      title: 'Giáo trình HTML cơ bản',
-      description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
+      title: 'Tài liệu hướng dẫn học',
+      description: 'Hướng dẫn chi tiết về cách học hiệu quả',
+      file_name: 'huong-dan-hoc.pdf',
+      file_path: '/documents/huong-dan-hoc.pdf',
+      file_size: 2621440, // 2.5MB
       file_type: 'pdf',
+      course_id: courseId || '',
+      uploaded_by: 'user1',
+      created_at: '2025-03-15T00:00:00Z',
+      updated_at: '2025-03-15T00:00:00Z',
       course: {
-        title: course.title
+        title: 'Khóa học mẫu'
       },
-      size: '2.5 MB',
-      downloads: 245,
-      uploadDate: '2025-03-15'
+      uploader: {
+        full_name: 'Nguyễn Văn A',
+        email: 'nguyenvana@example.com'
+      }
     },
     {
       id: '2',
-      title: 'Video bài giảng CSS',
-      description: 'Video hướng dẫn CSS cho người mới bắt đầu',
-      file_type: 'video',
+      title: 'Video bài giảng số 1',
+      description: 'Video bài giảng đầu tiên của khóa học',
+      file_name: 'bai-giang-1.mp4',
+      file_path: '/documents/bai-giang-1.mp4',
+      file_size: 131072000, // 125MB
+      file_type: 'mp4',
+      course_id: courseId || '',
+      uploaded_by: 'user2',
+      created_at: '2025-03-20T00:00:00Z',
+      updated_at: '2025-03-20T00:00:00Z',
       course: {
-        title: course.title
+        title: 'Khóa học mẫu'
       },
-      size: '125 MB',
-      downloads: 189,
-      uploadDate: '2025-03-20'
+      uploader: {
+        full_name: 'Trần Thị B',
+        email: 'tranthib@example.com'
+      }
     },
     {
       id: '3',
-      title: 'Slide JavaScript ES6',
-      description: 'Slide trình bày về JavaScript ES6+',
-      file_type: 'pptx',
+      title: 'Bài tập thực hành',
+      description: 'Tập hợp các bài tập thực hành',
+      file_name: 'bai-tap.pdf',
+      file_path: '/documents/bai-tap.pdf',
+      file_size: 8601600, // 8.2MB
+      file_type: 'pdf',
+      course_id: courseId || '',
+      uploaded_by: 'user3',
+      created_at: '2025-03-25T00:00:00Z',
+      updated_at: '2025-03-25T00:00:00Z',
       course: {
-        title: course.title
+        title: 'Khóa học mẫu'
       },
-      size: '8.2 MB',
-      downloads: 167,
-      uploadDate: '2025-03-25'
+      uploader: {
+        full_name: 'Lê Văn C',
+        email: 'levanc@example.com'
+      }
     }
   ];
 
@@ -169,6 +214,13 @@ const CourseDetail = () => {
     doc.title.toLowerCase().includes(searchDocuments.toLowerCase()) ||
     doc.file_type.toLowerCase().includes(searchDocuments.toLowerCase())
   );
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'N/A';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  };
 
   return (
     <DashboardLayout>
@@ -365,13 +417,13 @@ const CourseDetail = () => {
                           <TableHead>Mô tả</TableHead>
                           <TableHead>Danh mục</TableHead>
                           <TableHead>Kích thước</TableHead>
-                          <TableHead>Lượt tải</TableHead>
-                          <TableHead>Ngày tải lên</TableHead>
+                          <TableHead>Người tạo</TableHead>
+                          <TableHead>Ngày tạo</TableHead>
                           <TableHead className="w-[100px]">Hành động</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredDocuments.map((document) => (
+                        {filteredDocuments.map((document: Document) => (
                           <TableRow key={document.id}>
                             <TableCell>
                               <div className="flex items-center space-x-2">
@@ -383,9 +435,9 @@ const CourseDetail = () => {
                             <TableCell>
                               <Badge variant="outline">{document.file_type}</Badge>
                             </TableCell>
-                            <TableCell>{document.size}</TableCell>
-                            <TableCell>{document.downloads}</TableCell>
-                            <TableCell>{document.uploadDate}</TableCell>
+                            <TableCell>{formatFileSize(document.file_size)}</TableCell>
+                            <TableCell>{document.uploader?.full_name || 'Không xác định'}</TableCell>
+                            <TableCell>{new Date(document.created_at).toLocaleDateString('vi-VN')}</TableCell>
                             <TableCell>
                               <DocumentActionsMenu document={document} />
                             </TableCell>
@@ -498,7 +550,7 @@ const CourseDetail = () => {
 
                   {/* Documents Grid for Students */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredDocuments.map((document) => (
+                    {filteredDocuments.map((document: Document) => (
                       <Card key={document.id} className="hover:shadow-lg transition-shadow">
                         <CardHeader>
                           <div className="flex items-start justify-between">
@@ -515,11 +567,11 @@ const CourseDetail = () => {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Kích thước:</span>
-                              <span className="font-medium">{document.size}</span>
+                              <span className="font-medium">{formatFileSize(document.file_size)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Lượt tải:</span>
-                              <span className="font-medium">{document.downloads}</span>
+                              <span className="text-gray-600">Người tạo:</span>
+                              <span className="font-medium">{document.uploader?.full_name || 'Không xác định'}</span>
                             </div>
                           </div>
 
