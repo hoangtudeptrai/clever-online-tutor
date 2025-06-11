@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, Eye, EyeOff } from 'lucide-react';
@@ -10,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuth();
@@ -20,7 +19,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const success = await login(email, password);
+    const success = await login(username, password);
     if (success) {
       toast({
         title: "Đăng nhập thành công",
@@ -30,7 +29,7 @@ const Login = () => {
     } else {
       toast({
         title: "Đăng nhập thất bại",
-        description: "Email hoặc mật khẩu không chính xác",
+        description: "Username hoặc mật khẩu không chính xác",
         variant: "destructive",
       });
     }
@@ -53,13 +52,14 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="teacher@edumanage.vn"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                // type="email"
+                placeholder="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
@@ -90,11 +90,11 @@ const Login = () => {
             </Button>
           </form>
           
-          <div className="mt-4 text-center text-sm text-gray-600">
+          {/* <div className="mt-4 text-center text-sm text-gray-600">
             <p>Tài khoản demo:</p>
             <p>Giáo viên: teacher@edumanage.vn / 123456</p>
             <p>Học sinh: student@edumanage.vn / 123456</p>
-          </div>
+          </div> */}
           
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
