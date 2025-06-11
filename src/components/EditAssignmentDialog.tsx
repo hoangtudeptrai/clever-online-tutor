@@ -23,11 +23,12 @@ import {
 
 interface EditAssignmentDialogProps {
   assignment: {
-    id: number;
+    id: string;
     title: string;
     description: string;
     course: string;
     dueDate: string;
+    maxScore: number;
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,7 +40,7 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
     description: assignment.description,
     course: assignment.course,
     dueDate: assignment.dueDate,
-    maxGrade: '10',
+    maxGrade: assignment.maxScore.toString(),
     instructions: 'Hướng dẫn chi tiết cho bài tập...',
     attachments: [] as File[]
   });
