@@ -13,12 +13,22 @@ export interface Assignment {
   created_by: string;
   created_at: string;
   updated_at: string;
+  assignment_status?: 'draft' | 'published' | 'archived';
   course?: {
     title: string;
   };
   creator?: {
     full_name: string;
   };
+  submissions?: {
+    id: string;
+    status: string;
+    submitted_at: string;
+    grade?: number;
+    student: {
+      full_name: string;
+    };
+  }[];
 }
 
 export const useAssignments = () => {
@@ -27,13 +37,20 @@ export const useAssignments = () => {
   return useQuery({
     queryKey: ['assignments', profile?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('assignments')
         .select(`
           *,
           course:courses(title),
           creator:profiles!assignments_created_by_fkey(full_name)
         `);
+
+      // If user is a tutor, only get their assignments
+      if (profile?.role === 'tutor') {
+        query = query.eq('created_by', profile.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching assignments:', error);
@@ -43,6 +60,38 @@ export const useAssignments = () => {
       return data as Assignment[];
     },
     enabled: !!profile,
+  });
+};
+
+export const useAssignmentWithSubmissions = (assignmentId: string) => {
+  return useQuery({
+    queryKey: ['assignment', assignmentId, 'submissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assignments')
+        .select(`
+          *,
+          course:courses(title),
+          creator:profiles!assignments_created_by_fkey(full_name),
+          submissions:assignment_submissions(
+            id,
+            status,
+            submitted_at,
+            grade,
+            student:profiles!assignment_submissions_student_id_fkey(full_name)
+          )
+        `)
+        .eq('id', assignmentId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching assignment with submissions:', error);
+        throw error;
+      }
+
+      return data as Assignment;
+    },
+    enabled: !!assignmentId,
   });
 };
 
@@ -69,13 +118,14 @@ export const useCreateAssignment = () => {
           due_date: assignmentData.due_date,
           max_score: assignmentData.max_score,
           created_by: profile?.id,
+          assignment_status: 'draft', // Always start as draft
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Tạo assignment documents nếu có file đính kèm
+      // Create assignment documents if there are attachments
       if (assignmentData.attachments && assignmentData.attachments.length > 0) {
         const documentPromises = assignmentData.attachments.map(attachment => 
           supabase.from('assignment_documents').insert({
