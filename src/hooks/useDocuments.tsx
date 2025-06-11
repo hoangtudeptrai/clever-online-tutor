@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,8 +32,7 @@ export const useDocuments = () => {
         .from('course_documents')
         .select(`
           *,
-          course:courses(title),
-          uploader:profiles!course_documents_uploaded_by_fkey(full_name)
+          course:courses(title)
         `);
 
       if (error) {
@@ -46,7 +44,7 @@ export const useDocuments = () => {
       const transformedData = data?.map(doc => ({
         ...doc,
         course: Array.isArray(doc.course) ? doc.course[0] : doc.course,
-        uploader: Array.isArray(doc.uploader) ? doc.uploader[0] : doc.uploader
+        uploader: { full_name: 'Unknown' } // Default value for uploader
       })) as Document[];
 
       return transformedData;

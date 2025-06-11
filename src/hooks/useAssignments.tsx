@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,8 +40,7 @@ export const useAssignments = () => {
         .from('assignments')
         .select(`
           *,
-          course:courses(title),
-          creator:profiles!assignments_created_by_fkey(full_name)
+          course:courses(title)
         `);
 
       // If user is a tutor, only get their assignments
@@ -59,7 +57,7 @@ export const useAssignments = () => {
 
       return (data || []).map(assignment => ({
         ...assignment,
-        creator: Array.isArray(assignment.creator) ? assignment.creator[0] : assignment.creator
+        creator: { full_name: 'Unknown' } // Default value for creator
       })) as Assignment[];
     },
     enabled: !!profile,

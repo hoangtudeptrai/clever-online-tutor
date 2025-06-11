@@ -203,25 +203,7 @@ const Courses = () => {
                                 Quản lý khóa học
                               </Button>
                             </Link>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleManageStudents(course)}
-                            >
-                              <Users className="h-4 w-4 mr-2" />
-                              Học sinh
-                            </Button>
                           </div>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => setDeletingCourse(course.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Xóa khóa học
-                          </Button>
                         </>
                       ) : (
                         <>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
@@ -295,7 +294,7 @@ const CourseDetail = () => {
                   </div>
 
                   {/* Assignments Table */}
-                  <div className="border rounded-lg">
+                  {filteredAssignments.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -329,9 +328,7 @@ const CourseDetail = () => {
                         ))}
                       </TableBody>
                     </Table>
-                  </div>
-
-                  {filteredAssignments.length === 0 && (
+                  ) : (
                     <div className="text-center py-8 text-gray-500">
                       Không tìm thấy bài tập nào
                     </div>
@@ -360,7 +357,7 @@ const CourseDetail = () => {
                   </div>
 
                   {/* Documents Table */}
-                  <div className="border rounded-lg">
+                  {filteredDocuments.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -396,9 +393,7 @@ const CourseDetail = () => {
                         ))}
                       </TableBody>
                     </Table>
-                  </div>
-
-                  {filteredDocuments.length === 0 && (
+                  ) : (
                     <div className="text-center py-8 text-gray-500">
                       Không tìm thấy tài liệu nào
                     </div>
