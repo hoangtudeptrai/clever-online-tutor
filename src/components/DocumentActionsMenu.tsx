@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MoreVertical, Edit, Trash2, Eye, Download } from 'lucide-react';
 import {
@@ -19,22 +18,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import EditDocumentDialog from './EditDocumentDialog';
+import { useDownloadDocument, Document } from '@/hooks/useDocuments';
 
 interface DocumentActionsMenuProps {
-  document: {
-    id: string;
-    title: string;
-    description?: string;
-    file_type?: string;
-    course?: {
-      title: string;
-    };
-  };
+  document: Document;
 }
 
 const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const downloadDocument = useDownloadDocument();
 
   const handleDelete = () => {
     console.log('Xóa tài liệu:', document.id);
@@ -47,9 +40,12 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document }) =
     // Logic xem tài liệu
   };
 
-  const handleDownload = () => {
-    console.log('Tải xuống tài liệu:', document.id);
-    // Logic tải xuống tài liệu
+  const handleDownload = async () => {
+    try {
+      await downloadDocument.mutateAsync(document);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+    }
   };
 
   return (

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Document {
   id: string;
@@ -116,6 +117,51 @@ export const useDeleteDocument = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+    },
+  });
+};
+
+export const useDownloadDocument = () => {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (document: Document) => {
+      try {
+        const { data, error } = await supabase.storage
+          .from('course-documents')
+          .createSignedUrl(document.file_path, 60);
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data?.signedUrl) {
+          throw new Error('Could not generate download URL');
+        }
+
+        // Create an anchor element and trigger download
+        const link = window.document.createElement('a');
+        link.href = data.signedUrl;
+        link.download = document.file_name;
+        window.document.body.appendChild(link);
+        link.click();
+        window.document.body.removeChild(link);
+
+        toast({
+          title: "Tải xuống thành công",
+          description: `Tài liệu "${document.title}" đã được tải xuống`,
+        });
+
+        return data.signedUrl;
+      } catch (error) {
+        console.error('Download error:', error);
+        toast({
+          title: "Lỗi",
+          description: "Không thể tải xuống tài liệu. Vui lòng thử lại sau.",
+          variant: "destructive",
+        });
+        throw error;
+      }
     },
   });
 };
