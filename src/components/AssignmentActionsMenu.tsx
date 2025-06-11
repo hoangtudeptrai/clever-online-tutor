@@ -152,7 +152,7 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
           description: assignment.description || '',
           course: assignment.course?.title || '',
           dueDate: assignment.due_date || '',
-          maxScore: assignment.max_score || 100
+          maxScore: Number(assignment.max_score) || 100
         }}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}

@@ -29,6 +29,8 @@ const Courses = () => {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingCourse, setDeletingCourse] = useState<string | null>(null);
+  const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<{ id: string; title: string } | null>(null);
   const { data: courses = [], isLoading, error } = useCourses();
   const deleteMutation = useDeleteCourse();
   const { toast } = useToast();
@@ -66,6 +68,11 @@ const Courses = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleManageStudents = (course: { id: string; title: string }) => {
+    setSelectedCourse(course);
+    setManageStudentsOpen(true);
   };
 
   if (error) {
@@ -196,7 +203,14 @@ const Courses = () => {
                                 Quản lý khóa học
                               </Button>
                             </Link>
-                            <ManageStudentsDialog courseId={course.id} courseName={course.title} />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleManageStudents(course)}
+                            >
+                              <Users className="h-4 w-4 mr-2" />
+                              Học sinh
+                            </Button>
                           </div>
                           
                           <Button
@@ -280,6 +294,16 @@ const Courses = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Manage Students Dialog */}
+        {selectedCourse && (
+          <ManageStudentsDialog
+            courseId={selectedCourse.id}
+            courseName={selectedCourse.title}
+            open={manageStudentsOpen}
+            onOpenChange={setManageStudentsOpen}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
