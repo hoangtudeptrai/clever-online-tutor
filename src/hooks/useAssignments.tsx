@@ -57,7 +57,10 @@ export const useAssignments = () => {
         throw error;
       }
 
-      return data as Assignment[];
+      return (data || []).map(assignment => ({
+        ...assignment,
+        creator: Array.isArray(assignment.creator) ? assignment.creator[0] : assignment.creator
+      })) as Assignment[];
     },
     enabled: !!profile,
   });
@@ -89,7 +92,10 @@ export const useAssignmentWithSubmissions = (assignmentId: string) => {
         throw error;
       }
 
-      return data as Assignment;
+      return {
+        ...data,
+        creator: Array.isArray(data.creator) ? data.creator[0] : data.creator
+      } as Assignment;
     },
     enabled: !!assignmentId,
   });

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MoreVertical, Edit, Trash2, Eye, Play, Archive, FileCopy } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Eye, Play, Archive, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -34,6 +34,7 @@ interface AssignmentActionsMenuProps {
       title: string;
     };
     due_date?: string;
+    max_score?: number;
     assignment_status?: 'draft' | 'published' | 'archived';
   };
 }

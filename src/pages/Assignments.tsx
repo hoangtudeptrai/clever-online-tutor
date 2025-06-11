@@ -58,7 +58,9 @@ const Assignments = () => {
           return <Clock className="h-5 w-5" />;
       }
     } else {
-      const status = assignment.submission?.status || 'pending';
+      const submissions = assignment.submissions || [];
+      const userSubmission = submissions.find((sub: any) => sub.student_id === profile?.id);
+      const status = userSubmission?.status || 'pending';
       switch (status) {
         case 'submitted':
         case 'graded':
@@ -153,79 +155,84 @@ const Assignments = () => {
                 </p>
               </div>
             ) : (
-              filteredAssignments.map((assignment) => (
-                <Card key={assignment.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(assignment)}
-                        <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                      </div>
-                      {profile?.role === 'tutor' && (
-                        <AssignmentActionsMenu assignment={assignment} />
-                      )}
-                    </div>
-                    <CardDescription className="flex items-center space-x-2">
-                      <User className="h-4 w-4" />
-                      <span>{assignment.course?.title || 'Không có khóa học'}</span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                      {assignment.description || 'Không có mô tả'}
-                    </p>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center text-gray-600">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          Hạn nộp:
-                        </span>
-                        <span className="font-medium">{formatDate(assignment.due_date)}</span>
-                      </div>
-
-                      {profile?.role === 'tutor' ? (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Điểm tối đa:</span>
-                          <span className="font-medium">{assignment.max_score}</span>
+              filteredAssignments.map((assignment) => {
+                const submissions = assignment.submissions || [];
+                const userSubmission = submissions.find((sub: any) => sub.student_id === profile?.id);
+                
+                return (
+                  <Card key={assignment.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-2">
+                          {getStatusIcon(assignment)}
+                          <CardTitle className="text-lg">{assignment.title}</CardTitle>
                         </div>
-                      ) : (
-                        <>
-                          {assignment.submission?.submitted_at && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600">Ngày nộp:</span>
-                              <span className="font-medium">
-                                {formatDate(assignment.submission.submitted_at)}
-                              </span>
-                            </div>
-                          )}
-                          {assignment.submission?.grade !== null && assignment.submission?.grade !== undefined && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600">Điểm:</span>
-                              <span className="font-medium text-blue-600">
-                                {assignment.submission.grade}/{assignment.max_score}
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                        {profile?.role === 'tutor' && (
+                          <AssignmentActionsMenu assignment={assignment} />
+                        )}
+                      </div>
+                      <CardDescription className="flex items-center space-x-2">
+                        <User className="h-4 w-4" />
+                        <span>{assignment.course?.title || 'Không có khóa học'}</span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                        {assignment.description || 'Không có mô tả'}
+                      </p>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center text-gray-600">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Hạn nộp:
+                          </span>
+                          <span className="font-medium">{formatDate(assignment.due_date)}</span>
+                        </div>
 
-                    <div className="mt-4 pt-4 border-t">
-                      <Link to={`/dashboard/assignments/${assignment.id}`}>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full"
-                        >
-                          {profile?.role === 'tutor' ? 'Xem chi tiết' : 
-                            assignment.submission?.status === 'pending' ? 'Nộp bài' : 'Xem chi tiết'}
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                        {profile?.role === 'tutor' ? (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Điểm tối đa:</span>
+                            <span className="font-medium">{assignment.max_score}</span>
+                          </div>
+                        ) : (
+                          <>
+                            {userSubmission?.submitted_at && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">Ngày nộp:</span>
+                                <span className="font-medium">
+                                  {formatDate(userSubmission.submitted_at)}
+                                </span>
+                              </div>
+                            )}
+                            {userSubmission?.grade !== null && userSubmission?.grade !== undefined && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">Điểm:</span>
+                                <span className="font-medium text-blue-600">
+                                  {userSubmission.grade}/{assignment.max_score}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t">
+                        <Link to={`/dashboard/assignments/${assignment.id}`}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                          >
+                            {profile?.role === 'tutor' ? 'Xem chi tiết' : 
+                              userSubmission?.status === 'pending' ? 'Nộp bài' : 'Xem chi tiết'}
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         )}
