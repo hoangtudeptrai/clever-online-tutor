@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Upload, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,52 +21,106 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCourses } from '@/hooks/useCourses';
+import { useCreateDocument } from '@/hooks/useDocuments';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 const CreateDocumentDialog = () => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
-    course: '',
+    course_id: '',
     file: null as File | null
   });
 
-  const courses = [
-    'Lập trình Web',
-    'React Nâng cao',
-    'Node.js Cơ bản',
-    'Database Design'
-  ];
+  const { profile } = useAuth();
+  const { data: courses = [] } = useCourses();
+  const createDocumentMutation = useCreateDocument();
+  const { uploadFile, uploading } = useFileUpload();
+  const { toast } = useToast();
 
-  const categories = [
-    'Giáo trình',
-    'Video bài giảng',
-    'Slide',
-    'Hình ảnh',
-    'Tài liệu tham khảo',
-    'Source code'
-  ];
+  // Lọc khóa học của giáo viên hiện tại
+  const tutorCourses = profile?.role === 'tutor' 
+    ? courses.filter(course => course.instructor_id === profile.id)
+    : courses;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Tạo tài liệu mới:', formData);
-    // Logic tạo tài liệu
-    setOpen(false);
-    setFormData({
-      title: '',
-      description: '',
-      category: '',
-      course: '',
-      file: null
-    });
+    
+    if (!formData.title.trim() || !formData.course_id || !formData.file) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng điền đầy đủ thông tin và chọn file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Upload file lên storage
+      const uploadResult = await uploadFile(formData.file, 'course-documents');
+      if (!uploadResult) {
+        toast({
+          title: "Lỗi",
+          description: "Không thể tải file lên",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Tạo document record trong database
+      await createDocumentMutation.mutateAsync({
+        title: formData.title,
+        description: formData.description,
+        course_id: formData.course_id,
+        file_name: formData.file.name,
+        file_path: uploadResult.path,
+        file_size: formData.file.size,
+        file_type: formData.file.type
+      });
+
+      toast({
+        title: "Thành công",
+        description: "Đã tải lên tài liệu thành công",
+      });
+
+      setOpen(false);
+      setFormData({
+        title: '',
+        description: '',
+        course_id: '',
+        file: null
+      });
+    } catch (error) {
+      console.error('Error creating document:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo tài liệu",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        toast({
+          title: "Lỗi",
+          description: "File không được vượt quá 50MB",
+          variant: "destructive",
+        });
+        return;
+      }
       setFormData({ ...formData, file });
     }
+  };
+
+  const removeFile = () => {
+    setFormData({ ...formData, file: null });
   };
 
   return (
@@ -99,48 +153,30 @@ const CreateDocumentDialog = () => {
             </div>
 
             <div>
-              <Label htmlFor="doc-description">Mô tả tài liệu *</Label>
+              <Label htmlFor="doc-description">Mô tả tài liệu</Label>
               <Textarea
                 id="doc-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Nhập mô tả chi tiết về tài liệu"
                 className="min-h-[100px]"
-                required
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Khóa học *</Label>
-                <Select value={formData.course} onValueChange={(value) => setFormData({ ...formData, course: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn khóa học" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course} value={course}>
-                        {course}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Danh mục *</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn danh mục" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Khóa học *</Label>
+              <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn khóa học" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tutorCourses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -155,13 +191,13 @@ const CreateDocumentDialog = () => {
                       </Button>
                       <p className="text-sm text-gray-500">PDF, DOC, PPT, Video, Image lên đến 50MB</p>
                       {formData.file && (
-                        <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
+                        <div className="flex items-center justify-center space-x-2 text-sm text-green-600 mt-2">
                           <span>{formData.file.name}</span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => setFormData({ ...formData, file: null })}
+                            onClick={removeFile}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -172,7 +208,7 @@ const CreateDocumentDialog = () => {
                   <input
                     id="document-file"
                     type="file"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.jpg,.jpeg,.png,.zip"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov,.jpg,.jpeg,.png,.zip"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
@@ -185,8 +221,12 @@ const CreateDocumentDialog = () => {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Hủy
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              Tải lên tài liệu
+            <Button 
+              type="submit" 
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={createDocumentMutation.isPending || uploading}
+            >
+              {createDocumentMutation.isPending || uploading ? 'Đang tải lên...' : 'Tải lên tài liệu'}
             </Button>
           </div>
         </form>

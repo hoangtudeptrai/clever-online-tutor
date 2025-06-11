@@ -1,26 +1,42 @@
 
 import React, { useState } from 'react';
-import { Search, Users, BookOpen, Clock, Star, Loader2 } from 'lucide-react';
+import { Search, Users, BookOpen, Clock, Star, Loader2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import CreateCourseDialog from '@/components/CreateCourseDialog';
 import CourseActionsMenu from '@/components/CourseActionsMenu';
+import ManageStudentsDialog from '@/components/ManageStudentsDialog';
 import { useCourses } from '@/hooks/useCourses';
+import { useDeleteCourse } from '@/hooks/useDeleteCourse';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const Courses = () => {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [deletingCourse, setDeletingCourse] = useState<string | null>(null);
   const { data: courses = [], isLoading, error } = useCourses();
+  const deleteMutation = useDeleteCourse();
+  const { toast } = useToast();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
-        return <Badge className="bg-green-100 text-green-800">Đang học</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Đã xuất bản</Badge>;
       case 'completed':
         return <Badge className="bg-blue-100 text-blue-800">Hoàn thành</Badge>;
       case 'draft':
@@ -34,6 +50,23 @@ const Courses = () => {
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     course.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDeleteCourse = async (courseId: string) => {
+    try {
+      await deleteMutation.mutateAsync(courseId);
+      setDeletingCourse(null);
+      toast({
+        title: "Thành công",
+        description: "Đã xóa khóa học thành công",
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa khóa học",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (error) {
     return (
@@ -100,17 +133,26 @@ const Courses = () => {
               </div>
             ) : (
               filteredCourses.map((course) => (
-                <Card key={course.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="aspect-video bg-gray-200 rounded-t-lg">
-                    <img 
-                      src={course.thumbnail || '/placeholder.svg'} 
-                      alt={course.title}
-                      className="w-full h-full object-cover rounded-t-lg"
-                    />
+                <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                  <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
+                    {course.thumbnail ? (
+                      <img 
+                        src={course.thumbnail} 
+                        alt={course.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder.svg';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <BookOpen className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
                   </div>
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{course.title}</CardTitle>
+                      <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(course.status)}
                         {profile?.role === 'tutor' && (
@@ -147,6 +189,25 @@ const Courses = () => {
                             </span>
                             <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
                           </div>
+                          
+                          <div className="flex space-x-2">
+                            <Link to={`/dashboard/courses/${course.id}`} className="flex-1">
+                              <Button variant="outline" size="sm" className="w-full">
+                                Quản lý khóa học
+                              </Button>
+                            </Link>
+                            <ManageStudentsDialog courseId={course.id} courseName={course.title} />
+                          </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => setDeletingCourse(course.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Xóa khóa học
+                          </Button>
                         </>
                       ) : (
                         <>
@@ -178,17 +239,14 @@ const Courses = () => {
                               0/{course.lessons_count || 0} bài học
                             </div>
                           </div>
+
+                          <Link to={`/dashboard/courses/${course.id}`} className="block">
+                            <Button variant="outline" size="sm" className="w-full">
+                              Tiếp tục học
+                            </Button>
+                          </Link>
                         </>
                       )}
-
-                      <Link 
-                        to={`/dashboard/courses/${course.id}`}
-                        className="block"
-                      >
-                        <Button variant="outline" size="sm" className="w-full">
-                          {profile?.role === 'tutor' ? 'Quản lý khóa học' : 'Tiếp tục học'}
-                        </Button>
-                      </Link>
                     </div>
                   </CardContent>
                 </Card>
@@ -196,6 +254,32 @@ const Courses = () => {
             )}
           </div>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deletingCourse} onOpenChange={() => setDeletingCourse(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xác nhận xóa khóa học</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc chắn muốn xóa khóa học này? 
+                Hành động này không thể hoàn tác và sẽ xóa tất cả dữ liệu liên quan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deletingCourse && handleDeleteCourse(deletingCourse)}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Xóa khóa học
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

@@ -8,24 +8,16 @@ export interface Assignment {
   title: string;
   description?: string;
   course_id: string;
-  created_by: string;
   due_date?: string;
-  max_score: number;
-  assignment_status: string;
+  max_score?: number;
+  created_by: string;
   created_at: string;
   updated_at: string;
   course?: {
     title: string;
   };
-  instructor?: {
+  creator?: {
     full_name: string;
-  };
-  submission?: {
-    id: string;
-    status: string;
-    grade?: number;
-    feedback?: string;
-    submitted_at?: string;
   };
 }
 
@@ -33,61 +25,22 @@ export const useAssignments = () => {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ['assignments', profile?.id, profile?.role],
+    queryKey: ['assignments', profile?.id],
     queryFn: async () => {
-      let query;
+      const { data, error } = await supabase
+        .from('assignments')
+        .select(`
+          *,
+          course:courses(title),
+          creator:profiles!assignments_created_by_fkey(full_name)
+        `);
 
-      // If user is a student, also get their submissions
-      if (profile?.role === 'student') {
-        const { data, error } = await supabase
-          .from('assignments')
-          .select(`
-            *,
-            course:courses(title),
-            instructor:profiles!assignments_created_by_fkey(full_name),
-            submission:assignment_submissions(id, status, grade, feedback, submitted_at)
-          `)
-          .eq('assignment_submissions.student_id', profile.id);
-
-        if (error) {
-          console.error('Error fetching assignments:', error);
-          throw error;
-        }
-
-        // Transform the data to match our interface
-        const transformedData = data?.map(assignment => ({
-          ...assignment,
-          instructor: Array.isArray(assignment.instructor) ? assignment.instructor[0] : assignment.instructor,
-          course: Array.isArray(assignment.course) ? assignment.course[0] : assignment.course,
-          submission: Array.isArray(assignment.submission) ? assignment.submission[0] : assignment.submission
-        })) as Assignment[];
-
-        return transformedData;
-      } else {
-        // For tutors, get assignments they created
-        const { data, error } = await supabase
-          .from('assignments')
-          .select(`
-            *,
-            course:courses(title),
-            instructor:profiles!assignments_created_by_fkey(full_name)
-          `)
-          .eq('created_by', profile?.id);
-
-        if (error) {
-          console.error('Error fetching assignments:', error);
-          throw error;
-        }
-
-        // Transform the data to match our interface
-        const transformedData = data?.map(assignment => ({
-          ...assignment,
-          instructor: Array.isArray(assignment.instructor) ? assignment.instructor[0] : assignment.instructor,
-          course: Array.isArray(assignment.course) ? assignment.course[0] : assignment.course
-        })) as Assignment[];
-
-        return transformedData;
+      if (error) {
+        console.error('Error fetching assignments:', error);
+        throw error;
       }
+
+      return data as Assignment[];
     },
     enabled: !!profile,
   });
@@ -102,53 +55,48 @@ export const useCreateAssignment = () => {
       title: string;
       description?: string;
       course_id: string;
-      due_date?: string;
+      due_date?: string | null;
       max_score?: number;
+      instructions: string;
+      attachments?: any[];
     }) => {
       const { data, error } = await supabase
         .from('assignments')
         .insert({
-          ...assignmentData,
+          title: assignmentData.title,
+          description: assignmentData.description,
+          course_id: assignmentData.course_id,
+          due_date: assignmentData.due_date,
+          max_score: assignmentData.max_score,
           created_by: profile?.id,
-          assignment_status: 'published',
-          max_score: assignmentData.max_score || 100,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Tạo assignment documents nếu có file đính kèm
+      if (assignmentData.attachments && assignmentData.attachments.length > 0) {
+        const documentPromises = assignmentData.attachments.map(attachment => 
+          supabase.from('assignment_documents').insert({
+            assignment_id: data.id,
+            title: attachment.file_name,
+            file_name: attachment.file_name,
+            file_path: attachment.file_path,
+            file_size: attachment.file_size,
+            file_type: attachment.file_type,
+            uploaded_by: profile?.id
+          })
+        );
+
+        await Promise.all(documentPromises);
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
-    },
-  });
-};
-
-export const useSubmitAssignment = () => {
-  const queryClient = useQueryClient();
-  const { profile } = useAuth();
-
-  return useMutation({
-    mutationFn: async (submissionData: {
-      assignment_id: string;
-      content?: string;
-    }) => {
-      const { data, error } = await supabase
-        .from('assignment_submissions')
-        .insert({
-          ...submissionData,
-          student_id: profile?.id,
-          status: 'submitted',
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });
 };

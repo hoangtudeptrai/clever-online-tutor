@@ -21,44 +21,111 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCourses } from '@/hooks/useCourses';
+import { useCreateAssignment } from '@/hooks/useAssignments';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 const CreateAssignmentDialog = () => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    course: '',
-    dueDate: '',
-    maxGrade: '10',
+    course_id: '',
+    due_date: '',
+    max_score: '10',
     instructions: '',
     attachments: [] as File[]
   });
 
-  const courses = [
-    'Lập trình Web',
-    'React Nâng cao',
-    'Node.js Cơ bản',
-    'Database Design'
-  ];
+  const { profile } = useAuth();
+  const { data: courses = [] } = useCourses();
+  const createAssignmentMutation = useCreateAssignment();
+  const { uploadFile, uploading } = useFileUpload();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Lọc khóa học của giáo viên hiện tại
+  const tutorCourses = profile?.role === 'tutor' 
+    ? courses.filter(course => course.instructor_id === profile.id)
+    : courses;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Tạo bài tập mới:', formData);
-    // Logic tạo bài tập
-    setOpen(false);
-    setFormData({
-      title: '',
-      description: '',
-      course: '',
-      dueDate: '',
-      maxGrade: '10',
-      instructions: '',
-      attachments: []
-    });
+    
+    if (!formData.title.trim() || !formData.course_id || !formData.instructions.trim()) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng điền đầy đủ thông tin bắt buộc",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Upload các file đính kèm
+      const uploadedFiles = [];
+      for (const file of formData.attachments) {
+        const uploadResult = await uploadFile(file, 'assignment-files');
+        if (uploadResult) {
+          uploadedFiles.push({
+            file_name: file.name,
+            file_path: uploadResult.path,
+            file_size: file.size,
+            file_type: file.type
+          });
+        }
+      }
+
+      await createAssignmentMutation.mutateAsync({
+        title: formData.title,
+        description: formData.description,
+        course_id: formData.course_id,
+        due_date: formData.due_date ? new Date(formData.due_date).toISOString() : null,
+        max_score: parseInt(formData.max_score),
+        instructions: formData.instructions,
+        attachments: uploadedFiles
+      });
+
+      toast({
+        title: "Thành công",
+        description: "Đã tạo bài tập mới thành công",
+      });
+
+      setOpen(false);
+      setFormData({
+        title: '',
+        description: '',
+        course_id: '',
+        due_date: '',
+        max_score: '10',
+        instructions: '',
+        attachments: []
+      });
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo bài tập",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    
+    // Kiểm tra kích thước file
+    const oversizedFiles = files.filter(file => file.size > 20 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "Lỗi",
+        description: "Một số file vượt quá 20MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setFormData({ ...formData, attachments: [...formData.attachments, ...files] });
   };
 
@@ -97,52 +164,50 @@ const CreateAssignmentDialog = () => {
             </div>
 
             <div>
-              <Label htmlFor="assignment-description">Mô tả ngắn *</Label>
+              <Label htmlFor="assignment-description">Mô tả ngắn</Label>
               <Input
                 id="assignment-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Mô tả ngắn gọn về bài tập"
-                required
               />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Khóa học *</Label>
-                <Select value={formData.course} onValueChange={(value) => setFormData({ ...formData, course: value })}>
+                <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn khóa học" />
                   </SelectTrigger>
                   <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course} value={course}>
-                        {course}
+                    {tutorCourses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="due-date">Hạn nộp *</Label>
+                <Label htmlFor="due-date">Hạn nộp</Label>
                 <div className="relative">
                   <Input
                     id="due-date"
                     type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    required
+                    value={formData.due_date}
+                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                   />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
                 </div>
               </div>
               <div>
-                <Label htmlFor="max-grade">Điểm tối đa</Label>
+                <Label htmlFor="max-score">Điểm tối đa</Label>
                 <Input
-                  id="max-grade"
+                  id="max-score"
                   type="number"
-                  value={formData.maxGrade}
-                  onChange={(e) => setFormData({ ...formData, maxGrade: e.target.value })}
+                  value={formData.max_score}
+                  onChange={(e) => setFormData({ ...formData, max_score: e.target.value })}
                   placeholder="10"
                 />
               </div>
@@ -209,8 +274,12 @@ const CreateAssignmentDialog = () => {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Hủy
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              Tạo bài tập
+            <Button 
+              type="submit" 
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={createAssignmentMutation.isPending || uploading}
+            >
+              {createAssignmentMutation.isPending || uploading ? 'Đang tạo...' : 'Tạo bài tập'}
             </Button>
           </div>
         </form>

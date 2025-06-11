@@ -48,16 +48,25 @@ const Register = () => {
 
     setIsLoading(true);
     const { error } = await signUp(email, password, { fullName: name, role });
+    
     if (!error) {
       toast({
         title: "Đăng ký thành công",
-        description: "Chào mừng bạn đến với EduManage!",
+        description: "Vui lòng kiểm tra email để xác nhận tài khoản. Sau khi xác nhận, bạn có thể đăng nhập.",
       });
-      navigate('/dashboard');
+      navigate('/login');
     } else {
+      let errorMessage = "Có lỗi xảy ra, vui lòng thử lại";
+      
+      if (error.message?.includes('User already registered')) {
+        errorMessage = "Email này đã được đăng ký";
+      } else if (error.message?.includes('Password should be at least')) {
+        errorMessage = "Mật khẩu quá yếu";
+      }
+      
       toast({
         title: "Đăng ký thất bại",
-        description: "Có lỗi xảy ra, vui lòng thử lại",
+        description: errorMessage,
         variant: "destructive",
       });
     }

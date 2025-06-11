@@ -26,29 +26,65 @@ export const useCourses = () => {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ['courses', profile?.role],
+    queryKey: ['courses', profile?.role, profile?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select(`
-          *,
-          instructor:profiles!courses_instructor_id_fkey(id, full_name, email)
-        `)
-        .eq(profile?.role === 'tutor' ? 'instructor_id' : 'status', 
-            profile?.role === 'tutor' ? profile.id : 'published');
+      if (!profile) return [];
 
-      if (error) {
-        console.error('Error fetching courses:', error);
-        throw error;
+      if (profile.role === 'tutor') {
+        // Lấy khóa học của giáo viên
+        const { data: coursesData, error } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('instructor_id', profile.id);
+
+        if (error) {
+          console.error('Error fetching tutor courses:', error);
+          throw error;
+        }
+
+        // Lấy thông tin instructor cho mỗi khóa học
+        const coursesWithInstructor = await Promise.all((coursesData || []).map(async (course) => {
+          const { data: instructorData } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', course.instructor_id)
+            .single();
+
+          return {
+            ...course,
+            instructor: instructorData
+          };
+        }));
+
+        return coursesWithInstructor as Course[];
+      } else {
+        // Lấy khóa học cho học sinh (chỉ những khóa đã published)
+        const { data: coursesData, error } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('status', 'published');
+
+        if (error) {
+          console.error('Error fetching student courses:', error);
+          throw error;
+        }
+
+        // Lấy thông tin instructor cho mỗi khóa học
+        const coursesWithInstructor = await Promise.all((coursesData || []).map(async (course) => {
+          const { data: instructorData } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', course.instructor_id)
+            .single();
+
+          return {
+            ...course,
+            instructor: instructorData
+          };
+        }));
+
+        return coursesWithInstructor as Course[];
       }
-
-      // Transform the data to match our interface
-      const transformedData = data?.map(course => ({
-        ...course,
-        instructor: Array.isArray(course.instructor) ? course.instructor[0] : course.instructor
-      })) as Course[];
-
-      return transformedData;
     },
     enabled: !!profile,
   });
@@ -80,6 +116,7 @@ export const useCreateCourse = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });
 };
@@ -107,6 +144,7 @@ export const useUpdateCourse = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });
 };

@@ -30,9 +30,17 @@ const Login = () => {
       });
       navigate('/dashboard');
     } else {
+      let errorMessage = "Email hoặc mật khẩu không chính xác";
+      
+      if (error.message?.includes('Email not confirmed')) {
+        errorMessage = "Vui lòng xác nhận email trước khi đăng nhập";
+      } else if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = "Thông tin đăng nhập không chính xác";
+      }
+      
       toast({
         title: "Đăng nhập thất bại",
-        description: "Email hoặc mật khẩu không chính xác",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -60,7 +68,7 @@ const Login = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="teacher@edumanage.vn"
+                placeholder="example@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -72,7 +80,7 @@ const Login = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="123456"
+                  placeholder="Nhập mật khẩu"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -92,12 +100,6 @@ const Login = () => {
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
-          
-          <div className="mt-4 text-center text-sm text-gray-600">
-            <p>Tài khoản demo:</p>
-            <p>Giáo viên: teacher@edumanage.vn / 123456</p>
-            <p>Học sinh: student@edumanage.vn / 123456</p>
-          </div>
           
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
