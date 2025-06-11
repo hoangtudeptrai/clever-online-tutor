@@ -51,22 +51,22 @@ api.defaults.withCredentials = false
 type Params = Record<string, any>
 type Payload = Record<string, any>
 
-export const getApi = (url: string, params: Params = {}, other: AxiosRequestConfig = {}) => {
-    return api.get(url, { params, ...other })
+export const getApi = <T = any>(url: string, params: Params = {}, other: AxiosRequestConfig = {}) => {
+    return api.get<T>(url, { params, ...other })
 }
 
-export const postApi = (url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
-    return api.post(url, payload, { ...other })
+export const postApi = <T = any>(url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
+    return api.post<T>(url, payload, { ...other })
 }
 
-export const putApi = (url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
-    return api.put(url, payload, { ...other })
+export const putApi = <T = any>(url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
+    return api.put<T>(url, payload, { ...other })
 }
 
-export const patchApi = (url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
-    return api.patch(url, payload, { ...other })
+export const patchApi = <T = any>(url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
+    return api.patch<T>(url, payload, { ...other })
 }
 
-export const deleteApi = (url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
-    return api.delete(url, { data: payload, ...other })
+export const deleteApi = <T = any>(url: string, payload: Payload = {}, other: AxiosRequestConfig = {}) => {
+    return api.delete<T>(url, { data: payload, ...other })
 }

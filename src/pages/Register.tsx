@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, Eye, EyeOff } from 'lucide-react';
@@ -7,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
 
 const Register = () => {
-  const [name, setName] = useState('');
+  const [user_name, setUserName] = useState('');
+  const [full_name, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,6 +24,7 @@ const Register = () => {
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
+    
     e.preventDefault();
     
     if (password !== confirmPassword) {
@@ -43,7 +45,7 @@ const Register = () => {
       return;
     }
 
-    const success = await register(email, password, name, role);
+    const success = await register(email, user_name.trim(), password, full_name.trim(), role);
     if (success) {
       toast({
         title: "Đăng ký thành công",
@@ -76,13 +78,24 @@ const Register = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Họ và tên</Label>
+              <Label htmlFor="full_name">Họ và tên</Label>
               <Input
-                id="name"
+                id="full_name"
                 type="text"
                 placeholder="Nguyễn Văn A"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={full_name}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user_name">Tên đăng nhập</Label>
+              <Input
+                id="user_name"
+                type="text"
+                placeholder="username"
+                value={user_name}
+                onChange={(e) => setUserName(e.target.value)}
                 required
               />
             </div>
