@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Calendar, Download, Filter, TrendingUp, Users, Award, FileText } from 'lucide-react';
@@ -6,39 +5,194 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DashboardLayout from '@/components/DashboardLayout';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useQuery } from '@tanstack/react-query';
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState('month');
+  const supabase = useSupabaseClient();
 
-  const classPerformanceData = [
-    { course: 'Lập trình Web', students: 30, avgGrade: 8.2, completed: 85 },
-    { course: 'React Nâng cao', students: 25, avgGrade: 8.7, completed: 78 },
-    { course: 'Node.js Cơ bản', students: 20, avgGrade: 7.9, completed: 90 },
-    { course: 'Database Design', students: 18, avgGrade: 8.4, completed: 72 }
-  ];
+  // Fetch tổng số học sinh
+  const { data: totalStudents } = useQuery({
+    queryKey: ['total-students'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'student');
+      return count || 0;
+    },
+  });
 
-  const monthlyProgressData = [
-    { month: 'T1', submissions: 45, avgGrade: 7.8 },
-    { month: 'T2', submissions: 52, avgGrade: 8.1 },
-    { month: 'T3', submissions: 48, avgGrade: 8.3 },
-    { month: 'T4', submissions: 58, avgGrade: 8.5 }
-  ];
+  // Fetch tổng số giáo viên
+  const { data: totalTutors } = useQuery({
+    queryKey: ['total-tutors'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'tutor');
+      return count || 0;
+    },
+  });
 
-  const gradeDistributionData = [
-    { grade: '9-10', count: 25, color: '#10B981' },
-    { grade: '8-8.9', count: 35, color: '#3B82F6' },
-    { grade: '7-7.9', count: 20, color: '#F59E0B' },
-    { grade: '6-6.9', count: 12, color: '#EF4444' },
-    { grade: '<6', count: 8, color: '#6B7280' }
-  ];
+  // Fetch tổng số khóa học
+  const { data: totalCourses } = useQuery({
+    queryKey: ['total-courses'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('courses')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
 
-  const topStudents = [
-    { name: 'Vũ Thị Giang', grade: 9.5, assignments: 20, completion: 100 },
-    { name: 'Trần Thị Bình', grade: 9.2, assignments: 18, completion: 95 },
-    { name: 'Phạm Thị Dung', grade: 8.9, assignments: 12, completion: 92 },
-    { name: 'Hoàng Văn Em', grade: 8.5, assignments: 10, completion: 88 },
-    { name: 'Nguyễn Văn An', grade: 8.3, assignments: 15, completion: 85 }
-  ];
+  // Fetch tổng số bài tập
+  const { data: totalAssignments } = useQuery({
+    queryKey: ['total-assignments'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('assignments')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  // Fetch hiệu suất khóa học
+  const { data: coursePerformance } = useQuery({
+    queryKey: ['course-performance'],
+    queryFn: async () => {
+      const { data: courses } = await supabase
+        .from('courses')
+        .select(`
+          id,
+          title,
+          assignments (
+            id,
+            status,
+            grade
+          ),
+          enrollments (
+            id
+          )
+        `);
+
+      return courses?.map(course => ({
+        course: course.title,
+        students: course.enrollments?.length || 0,
+        avgGrade: course.assignments?.reduce((acc, curr) => acc + (curr.grade || 0), 0) / (course.assignments?.length || 1),
+        completed: (course.assignments?.filter(a => a.status === 'completed').length || 0) * 100 / (course.assignments?.length || 1)
+      })) || [];
+    },
+  });
+
+  // Fetch phân bố điểm số
+  const { data: gradeDistribution } = useQuery({
+    queryKey: ['grade-distribution'],
+    queryFn: async () => {
+      const { data: assignments } = await supabase
+        .from('assignments')
+        .select('grade')
+        .not('grade', 'is', null);
+
+      const distribution = {
+        '9-10': { grade: '9-10', count: 0, color: '#10B981' },
+        '8-8.9': { grade: '8-8.9', count: 0, color: '#3B82F6' },
+        '7-7.9': { grade: '7-7.9', count: 0, color: '#F59E0B' },
+        '6-6.9': { grade: '6-6.9', count: 0, color: '#EF4444' },
+        '<6': { grade: '<6', count: 0, color: '#6B7280' }
+      };
+
+      assignments?.forEach(assignment => {
+        const grade = assignment.grade;
+        if (grade >= 9) distribution['9-10'].count++;
+        else if (grade >= 8) distribution['8-8.9'].count++;
+        else if (grade >= 7) distribution['7-7.9'].count++;
+        else if (grade >= 6) distribution['6-6.9'].count++;
+        else distribution['<6'].count++;
+      });
+
+      return Object.values(distribution);
+    },
+  });
+
+  // Fetch tiến độ theo tháng
+  const { data: monthlyProgress } = useQuery({
+    queryKey: ['monthly-progress', timeRange],
+    queryFn: async () => {
+      const now = new Date();
+      const startDate = new Date();
+      
+      switch (timeRange) {
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case 'quarter':
+          startDate.setMonth(now.getMonth() - 3);
+          break;
+        case 'year':
+          startDate.setFullYear(now.getFullYear() - 1);
+          break;
+      }
+
+      const { data: assignments } = await supabase
+        .from('assignments')
+        .select('created_at, grade')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', now.toISOString())
+        .order('created_at');
+
+      const monthlyData: { [key: string]: { submissions: number; totalGrade: number } } = {};
+
+      assignments?.forEach(assignment => {
+        const month = new Date(assignment.created_at).toLocaleDateString('vi-VN', { month: 'short' });
+        if (!monthlyData[month]) {
+          monthlyData[month] = { submissions: 0, totalGrade: 0 };
+        }
+        monthlyData[month].submissions++;
+        monthlyData[month].totalGrade += assignment.grade || 0;
+      });
+
+      return Object.entries(monthlyData).map(([month, data]) => ({
+        month,
+        submissions: data.submissions,
+        avgGrade: data.totalGrade / data.submissions
+      }));
+    },
+  });
+
+  // Fetch top học sinh
+  const { data: topStudents } = useQuery({
+    queryKey: ['top-students'],
+    queryFn: async () => {
+      const { data: students } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          assignments (
+            id,
+            grade,
+            status
+          )
+        `)
+        .eq('role', 'student')
+        .order('full_name');
+
+      return students
+        ?.map(student => ({
+          name: student.full_name,
+          grade: student.assignments?.reduce((acc, curr) => acc + (curr.grade || 0), 0) / (student.assignments?.length || 1),
+          assignments: student.assignments?.length || 0,
+          completion: (student.assignments?.filter(a => a.status === 'completed').length || 0) * 100 / (student.assignments?.length || 1)
+        }))
+        .sort((a, b) => b.grade - a.grade)
+        .slice(0, 5) || [];
+    },
+  });
 
   const getGradeColor = (grade: number) => {
     if (grade >= 9) return 'text-green-600';
@@ -84,7 +238,7 @@ const Reports = () => {
               <div className="flex items-center space-x-2">
                 <Users className="h-8 w-8 text-blue-600" />
                 <div>
-                  <p className="text-2xl font-bold">93</p>
+                  <p className="text-2xl font-bold">{totalStudents}</p>
                   <p className="text-sm text-gray-600">Tổng học sinh</p>
                 </div>
               </div>
@@ -95,8 +249,8 @@ const Reports = () => {
               <div className="flex items-center space-x-2">
                 <Award className="h-8 w-8 text-green-600" />
                 <div>
-                  <p className="text-2xl font-bold text-green-600">8.3</p>
-                  <p className="text-sm text-gray-600">Điểm TB chung</p>
+                  <p className="text-2xl font-bold">{totalTutors}</p>
+                  <p className="text-sm text-gray-600">Tổng giáo viên</p>
                 </div>
               </div>
             </CardContent>
@@ -106,8 +260,8 @@ const Reports = () => {
               <div className="flex items-center space-x-2">
                 <FileText className="h-8 w-8 text-orange-600" />
                 <div>
-                  <p className="text-2xl font-bold">203</p>
-                  <p className="text-sm text-gray-600">Bài tập đã nộp</p>
+                  <p className="text-2xl font-bold">{totalCourses}</p>
+                  <p className="text-sm text-gray-600">Tổng khóa học</p>
                 </div>
               </div>
             </CardContent>
@@ -117,8 +271,8 @@ const Reports = () => {
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-8 w-8 text-purple-600" />
                 <div>
-                  <p className="text-2xl font-bold">87%</p>
-                  <p className="text-sm text-gray-600">Tỷ lệ hoàn thành</p>
+                  <p className="text-2xl font-bold">{totalAssignments}</p>
+                  <p className="text-sm text-gray-600">Tổng bài tập</p>
                 </div>
               </div>
             </CardContent>
@@ -135,7 +289,7 @@ const Reports = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={classPerformanceData}>
+                <BarChart data={coursePerformance}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="course" angle={-45} textAnchor="end" height={80} />
                   <YAxis />
@@ -156,14 +310,14 @@ const Reports = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={gradeDistributionData}
+                    data={gradeDistribution}
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
                     dataKey="count"
                     label={({ grade, count }) => `${grade}: ${count}`}
                   >
-                    {gradeDistributionData.map((entry, index) => (
+                    {gradeDistribution?.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -181,7 +335,7 @@ const Reports = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyProgressData}>
+                <LineChart data={monthlyProgress}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis yAxisId="left" />
@@ -205,17 +359,17 @@ const Reports = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {topStudents.map((student, index) => (
+                {topStudents?.map((student, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium">{student.name}</p>
                       <p className="text-sm text-gray-600">
-                        {student.assignments} bài tập • {student.completion}% hoàn thành
+                        {student.assignments} bài tập • {student.completion.toFixed(1)}% hoàn thành
                       </p>
                     </div>
                     <div className="text-right">
                       <p className={`text-lg font-bold ${getGradeColor(student.grade)}`}>
-                        {student.grade}
+                        {student.grade.toFixed(1)}
                       </p>
                       <p className="text-xs text-gray-500">điểm TB</p>
                     </div>
@@ -233,12 +387,12 @@ const Reports = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {classPerformanceData.map((course, index) => (
+                {coursePerformance?.map((course, index) => (
                   <div key={index} className="p-3 border rounded-lg">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium">{course.course}</h4>
                       <span className={`text-lg font-bold ${getGradeColor(course.avgGrade)}`}>
-                        {course.avgGrade}
+                        {course.avgGrade.toFixed(1)}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -246,7 +400,7 @@ const Reports = () => {
                         <p className="text-gray-600">Học sinh: <span className="font-medium">{course.students}</span></p>
                       </div>
                       <div>
-                        <p className="text-gray-600">Hoàn thành: <span className="font-medium">{course.completed}%</span></p>
+                        <p className="text-gray-600">Hoàn thành: <span className="font-medium">{course.completed.toFixed(1)}%</span></p>
                       </div>
                     </div>
                     <div className="mt-2">
