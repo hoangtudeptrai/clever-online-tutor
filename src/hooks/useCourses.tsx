@@ -61,7 +61,7 @@ export const useCourses = () => {
         const { data: coursesData, error } = await supabase
           .from('courses')
           .select('*')
-          .eq('status', 'published');
+          .eq('status','active');
 
         if (error) {
           console.error('Error fetching student courses:', error);
