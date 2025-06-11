@@ -94,6 +94,14 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
     }
   };
 
+  // Helper function to safely convert max_score to number
+  const getMaxScore = (maxScore?: number): number => {
+    if (typeof maxScore === 'number') {
+      return maxScore;
+    }
+    return 100; // default value
+  };
+
   return (
     <>
       <div className="flex items-center space-x-2">
@@ -152,7 +160,7 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
           description: assignment.description || '',
           course: assignment.course?.title || '',
           dueDate: assignment.due_date || '',
-          maxScore: typeof assignment.max_score === 'number' ? assignment.max_score : (assignment.max_score ? parseInt(assignment.max_score.toString()) : 100)
+          maxScore: getMaxScore(assignment.max_score)
         }}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
