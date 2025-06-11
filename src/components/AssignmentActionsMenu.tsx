@@ -95,9 +95,13 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
   };
 
   // Helper function to safely convert max_score to number
-  const getMaxScore = (maxScore?: number): number => {
+  const getMaxScore = (maxScore?: number | string): number => {
     if (typeof maxScore === 'number') {
       return maxScore;
+    }
+    if (typeof maxScore === 'string') {
+      const parsed = parseInt(maxScore);
+      return isNaN(parsed) ? 100 : parsed;
     }
     return 100; // default value
   };
