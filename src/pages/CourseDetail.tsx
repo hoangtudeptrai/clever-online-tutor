@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
@@ -38,15 +37,17 @@ const CourseDetail = () => {
 
   // Fetch real data from database
   const { data: courses } = useCourses();
-  const { data: assignments } = useAssignments();
+  const { data: assignments, isLoading: assignmentsLoading } = useAssignments();
   const { data: documents } = useDocuments();
   const { data: courseStudents } = useCourseStudents(courseId || '');
 
   // Find current course
   const course = courses?.find(c => c.id === courseId);
 
-  // Filter assignments for this course
-  const courseAssignments = assignments?.filter(a => a.course_id === courseId) || [];
+  // Filter assignments for this course - handle both course_id and course?.id
+  const courseAssignments = assignments?.filter(a => 
+    a.course_id === courseId || a.course?.id === courseId
+  ) || [];
 
   // Filter documents for this course
   const courseDocuments = documents?.filter(d => d.course_id === courseId) || [];
@@ -56,6 +57,17 @@ const CourseDetail = () => {
   const assignmentsCount = courseAssignments.length;
   const lessonsCount = course?.lessons_count || 0;
   const avgProgress = courseStudents?.reduce((acc, student) => acc + (student.progress || 0), 0) / (studentsCount || 1) || 0;
+
+  // Loading state
+  if (assignmentsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Đang tải...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!course) {
     return (
@@ -181,10 +193,10 @@ const CourseDetail = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <Clock className="h-8 w-8 text-purple-600" />
+                <FileText className="h-8 w-8 text-purple-600" />
                 <div>
-                  <p className="text-2xl font-bold">{course.duration || 'N/A'}</p>
-                  <p className="text-sm text-gray-600">Thời lượng</p>
+                  <p className="text-2xl font-bold">{assignmentsCount}</p>
+                  <p className="text-sm text-gray-600">Bài tập</p>
                 </div>
               </div>
             </CardContent>
@@ -210,7 +222,7 @@ const CourseDetail = () => {
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="students">Học sinh</TabsTrigger>
               <TabsTrigger value="lessons">Bài học</TabsTrigger>
-              <TabsTrigger value="assignments">Bài tập</TabsTrigger>
+              <TabsTrigger value="assignments">Bài tập ({assignmentsCount})</TabsTrigger>
               <TabsTrigger value="documents">Tài liệu</TabsTrigger>
             </TabsList>
             
@@ -234,7 +246,7 @@ const CourseDetail = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Quản lý bài tập ({assignmentsCount})</CardTitle>
-                    <CreateAssignmentDialog />
+                    <CreateAssignmentDialog courseId={courseId} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -365,6 +377,7 @@ const CourseDetail = () => {
             </TabsContent>
           </Tabs>
         ) : (
+          // ... keep existing code (student view tabs)
           <Tabs defaultValue="lessons" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="lessons">Bài học</TabsTrigger>

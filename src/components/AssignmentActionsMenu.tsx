@@ -36,6 +36,7 @@ interface AssignmentActionsMenuProps {
     due_date?: string;
     max_score?: number;
     assignment_status?: 'draft' | 'published' | 'archived';
+    created_at: string;
   };
 }
 
@@ -108,54 +109,49 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
 
   return (
     <>
-      <div className="flex items-center space-x-2">
-        <Badge className={getStatusColor(assignment.assignment_status)}>
-          {getStatusText(assignment.assignment_status)}
-        </Badge>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-white">
-            <DropdownMenuItem onClick={handleView}>
-              <Eye className="h-4 w-4 mr-2" />
-              Xem chi tiết
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-white">
+          <DropdownMenuItem onClick={handleView}>
+            <Eye className="h-4 w-4 mr-2" />
+            Xem chi tiết
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Chỉnh sửa
+          </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
+          
+          {assignment.assignment_status === 'draft' && (
+            <DropdownMenuItem onClick={handlePublish}>
+              <Play className="h-4 w-4 mr-2" />
+              Kích hoạt bài tập
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Chỉnh sửa
+          )}
+          
+          {assignment.assignment_status === 'published' && (
+            <DropdownMenuItem onClick={handleArchive}>
+              <Archive className="h-4 w-4 mr-2" />
+              Lưu trữ
             </DropdownMenuItem>
-            
-            <DropdownMenuSeparator />
-            
-            {assignment.assignment_status === 'draft' && (
-              <DropdownMenuItem onClick={handlePublish}>
-                <Play className="h-4 w-4 mr-2" />
-                Kích hoạt bài tập
-              </DropdownMenuItem>
-            )}
-            
-            {assignment.assignment_status === 'published' && (
-              <DropdownMenuItem onClick={handleArchive}>
-                <Archive className="h-4 w-4 mr-2" />
-                Lưu trữ
-              </DropdownMenuItem>
-            )}
-            
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuItem 
-              onClick={() => setShowDeleteDialog(true)}
-              className="text-red-600 focus:text-red-600"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Xóa bài tập
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+          )}
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem 
+            onClick={() => setShowDeleteDialog(true)}
+            className="text-red-600 focus:text-red-600"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Xóa bài tập
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <EditAssignmentDialog
         assignment={{
