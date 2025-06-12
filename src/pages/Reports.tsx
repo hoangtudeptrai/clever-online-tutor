@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Calendar, Download, Filter, TrendingUp, Users, Award, FileText } from 'lucide-react';
@@ -62,41 +61,61 @@ const Reports = () => {
   const { data: coursePerformance } = useQuery({
     queryKey: ['course-performance'],
     queryFn: async () => {
+      // Fetch courses first
       const { data: courses } = await supabase
         .from('courses')
-        .select(`
-          id,
-          title,
-          assignments (
-            id,
-            assignment_submissions (
-              id,
-              status,
-              grade
-            )
-          ),
-          course_enrollments (
-            id
-          )
-        `);
+        .select('id, title');
 
-      return courses?.map(course => {
-        const submissions = course.assignments?.flatMap(a => a.assignment_submissions || []) || [];
-        const gradedSubmissions = submissions.filter(s => s.status === 'graded');
-        const avgGrade = gradedSubmissions.length > 0 
-          ? gradedSubmissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / gradedSubmissions.length 
-          : 0;
-        const completionRate = submissions.length > 0 
-          ? (gradedSubmissions.length * 100) / submissions.length 
-          : 0;
+      if (!courses) return [];
 
-        return {
-          course: course.title,
-          students: course.course_enrollments?.length || 0,
-          avgGrade,
-          completed: completionRate
-        };
-      }) || [];
+      // Fetch data for each course
+      const coursesWithStats = await Promise.all(
+        courses.map(async (course) => {
+          // Get enrollments count
+          const { count: studentCount } = await supabase
+            .from('course_enrollments')
+            .select('*', { count: 'exact', head: true })
+            .eq('course_id', course.id);
+
+          // Get assignments and their submissions
+          const { data: assignments } = await supabase
+            .from('assignments')
+            .select('id')
+            .eq('course_id', course.id);
+
+          if (!assignments?.length) {
+            return {
+              course: course.title,
+              students: studentCount || 0,
+              avgGrade: 0,
+              completed: 0
+            };
+          }
+
+          const assignmentIds = assignments.map(a => a.id);
+          
+          // Get submissions for these assignments
+          const { data: submissions } = await supabase
+            .from('assignment_submissions')
+            .select('grade, status')
+            .in('assignment_id', assignmentIds);
+
+          const gradedSubmissions = (submissions || []).filter(s => s.status === 'graded');
+          const avgGrade = gradedSubmissions.length > 0
+            ? gradedSubmissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / gradedSubmissions.length
+            : 0;
+          const completionRate = submissions?.length ? (gradedSubmissions.length * 100) / submissions.length : 0;
+
+          return {
+            course: course.title,
+            students: studentCount || 0,
+            avgGrade,
+            completed: completionRate
+          };
+        })
+      );
+
+      return coursesWithStats;
     },
   });
 
@@ -106,7 +125,8 @@ const Reports = () => {
     queryFn: async () => {
       const { data: submissions } = await supabase
         .from('assignment_submissions')
-        .select('grade')
+        .select('grade, status')
+        .eq('status', 'graded')
         .not('grade', 'is', null);
 
       const distribution = {
@@ -154,7 +174,8 @@ const Reports = () => {
 
       const { data: submissions } = await supabase
         .from('assignment_submissions')
-        .select('submitted_at, grade')
+        .select('submitted_at, grade, status')
+        .eq('status', 'graded')
         .gte('submitted_at', startDate.toISOString())
         .lte('submitted_at', now.toISOString())
         .not('submitted_at', 'is', null)
@@ -183,33 +204,29 @@ const Reports = () => {
   const { data: topStudents } = useQuery({
     queryKey: ['top-students'],
     queryFn: async () => {
-      const { data: students, error } = await supabase
+      // Fetch all students first
+      const { data: students } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          full_name
-        `)
+        .select('id, full_name')
         .eq('role', 'student');
 
-      if (error) {
-        console.error('Error fetching students:', error);
-        return [];
-      }
+      if (!students) return [];
 
-      // Fetch submissions for each student separately
+      // Fetch submissions for each student
       const studentsWithStats = await Promise.all(
-        (students || []).map(async (student) => {
+        students.map(async (student) => {
           const { data: submissions } = await supabase
             .from('assignment_submissions')
             .select('grade, status')
             .eq('student_id', student.id);
 
           const studentSubmissions = submissions || [];
-          const avgGrade = studentSubmissions.length > 0 
-            ? studentSubmissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / studentSubmissions.length 
+          const gradedSubmissions = studentSubmissions.filter(s => s.status === 'graded');
+          const avgGrade = gradedSubmissions.length > 0
+            ? gradedSubmissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / gradedSubmissions.length
             : 0;
-          const completionRate = studentSubmissions.length > 0 
-            ? (studentSubmissions.filter(s => s.status === 'graded').length * 100) / studentSubmissions.length 
+          const completionRate = studentSubmissions.length > 0
+            ? (gradedSubmissions.length * 100) / studentSubmissions.length
             : 0;
 
           return {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, Search, Loader2 } from 'lucide-react';
 import {
@@ -30,15 +29,15 @@ import { useStudents, useCourseStudents, useEnrollStudent, useUnenrollStudent } 
 import { useToast } from '@/hooks/use-toast';
 
 interface ManageStudentsDialogProps {
-  courseId: string;
-  courseName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  courseId: string;
+  courseTitle: string;
 }
 
 const ManageStudentsDialog: React.FC<ManageStudentsDialogProps> = ({ 
   courseId, 
-  courseName, 
+  courseTitle, 
   open, 
   onOpenChange 
 }) => {
@@ -99,7 +98,7 @@ const ManageStudentsDialog: React.FC<ManageStudentsDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Quản lý học sinh - {courseName}</DialogTitle>
+          <DialogTitle>Quản lý học sinh - {courseTitle}</DialogTitle>
           <DialogDescription>
             Thêm hoặc xóa học sinh khỏi khóa học
           </DialogDescription>

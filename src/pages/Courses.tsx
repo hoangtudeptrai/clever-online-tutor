@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Search, Users, BookOpen, Clock, Star, Loader2, Trash2 } from 'lucide-react';
+import { Search, Users, BookOpen, Clock, Star, Loader2, Trash2, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +13,7 @@ import ManageStudentsDialog from '@/components/ManageStudentsDialog';
 import { useCourses } from '@/hooks/useCourses';
 import { useDeleteCourse } from '@/hooks/useDeleteCourse';
 import { useToast } from '@/hooks/use-toast';
+import { useCourseAssignments } from '@/hooks/useCourseAssignments';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,7 +130,7 @@ const Courses = () => {
 
         {/* Courses Grid */}
         {!isLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredCourses.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -139,154 +139,193 @@ const Courses = () => {
                 </p>
               </div>
             ) : (
-              filteredCourses.map((course) => (
-                <Card key={course.id} className="hover:shadow-lg transition-shadow">
-                  <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
-                    {course.thumbnail ? (
-                      <img 
-                        src={course.thumbnail} 
-                        alt={course.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = '/placeholder.svg';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                        <BookOpen className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge(course.status)}
-                        {profile?.role === 'tutor' && (
-                          <CourseActionsMenu course={course} />
+              filteredCourses.map((course) => {
+                // Get assignments count for this course
+                const { data: courseAssignments = [] } = useCourseAssignments(course.id);
+                const assignmentsCount = courseAssignments.length;
+
+                return (
+                  <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                    <Link to={`/dashboard/courses/${course.id}`}>
+                      <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
+                        {course.thumbnail ? (
+                          <img 
+                            src={course.thumbnail} 
+                            alt={course.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/placeholder.svg';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                            <BookOpen className="h-12 w-12 text-gray-400" />
+                          </div>
                         )}
                       </div>
-                    </div>
-                    <CardDescription className="line-clamp-2">
-                      {course.description || 'Không có mô tả'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {profile?.role === 'tutor' ? (
-                        <>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center text-gray-600">
-                              <Users className="h-4 w-4 mr-1" />
-                              Học sinh:
-                            </span>
-                            <span className="font-medium">{course.students_count || 0}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center text-gray-600">
-                              <BookOpen className="h-4 w-4 mr-1" />
-                              Bài học:
-                            </span>
-                            <span className="font-medium">{course.lessons_count || 0}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center text-gray-600">
-                              <Clock className="h-4 w-4 mr-1" />
-                              Thời lượng:
-                            </span>
-                            <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
-                          </div>
-                          
-                          <div className="flex space-x-2">
-                            <Link to={`/dashboard/courses/${course.id}`} className="flex-1">
-                              <Button variant="outline" size="sm" className="w-full">
-                                Quản lý khóa học
+                    </Link>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <Link 
+                          to={`/dashboard/courses/${course.id}`}
+                          className="hover:text-blue-600 transition-colors"
+                        >
+                          <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
+                        </Link>
+                        <div className="flex items-center space-x-2">
+                          {getStatusBadge(course.status)}
+                          {profile?.role === 'tutor' && (
+                            <CourseActionsMenu course={course} />
+                          )}
+                        </div>
+                      </div>
+                      <CardDescription className="line-clamp-2">
+                        {course.description || 'Không có mô tả'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {profile?.role === 'tutor' ? (
+                          <>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <Users className="h-4 w-4 mr-1" />
+                                Học sinh:
+                              </span>
+                              <span className="font-medium">{course.students_count || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <BookOpen className="h-4 w-4 mr-1" />
+                                Bài học:
+                              </span>
+                              <span className="font-medium">{course.lessons_count || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <FileText className="h-4 w-4 mr-1" />
+                                Bài tập:
+                              </span>
+                              <span className="font-medium">{assignmentsCount}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <Clock className="h-4 w-4 mr-1" />
+                                Thời lượng:
+                              </span>
+                              <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
+                            </div>
+                            
+                            <div className="flex space-x-2 pt-4">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => handleManageStudents(course)}
+                              >
+                                <Users className="h-4 w-4 mr-2" />
+                                Quản lý học sinh
+                              </Button>
+                              <Link 
+                                to={`/dashboard/courses/${course.id}`}
+                                className="flex-1"
+                              >
+                                <Button 
+                                  variant="default"
+                                  size="sm"
+                                  className="w-full"
+                                >
+                                  Xem chi tiết
+                                </Button>
+                              </Link>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <BookOpen className="h-4 w-4 mr-1" />
+                                Bài học:
+                              </span>
+                              <span className="font-medium">{course.lessons_count || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <FileText className="h-4 w-4 mr-1" />
+                                Bài tập:
+                              </span>
+                              <span className="font-medium">{assignmentsCount}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <Clock className="h-4 w-4 mr-1" />
+                                Thời lượng:
+                              </span>
+                              <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center text-gray-600">
+                                <Star className="h-4 w-4 mr-1" />
+                                Tiến độ:
+                              </span>
+                              <span className="font-medium">{course.progress || 0}%</span>
+                            </div>
+
+                            <Link 
+                              to={`/dashboard/courses/${course.id}`}
+                              className="block mt-4"
+                            >
+                              <Button 
+                                variant="default"
+                                size="sm"
+                                className="w-full"
+                              >
+                                Vào học
                               </Button>
                             </Link>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Giảng viên:</span>
-                            <span className="font-medium">
-                              {course.instructor?.full_name || 'N/A'}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center text-gray-600">
-                              <Star className="h-4 w-4 mr-1 text-yellow-500" />
-                              Đánh giá:
-                            </span>
-                            <span className="font-medium">N/A</span>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600">Tiến độ:</span>
-                              <span className="font-medium">0%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-blue-600 h-2 rounded-full" 
-                                style={{ width: `0%` }}
-                              ></div>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              0/{course.lessons_count || 0} bài học
-                            </div>
-                          </div>
-
-                          <Link to={`/dashboard/courses/${course.id}`} className="block">
-                            <Button variant="outline" size="sm" className="w-full">
-                              Tiếp tục học
-                            </Button>
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         )}
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={!!deletingCourse} onOpenChange={() => setDeletingCourse(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Xác nhận xóa khóa học</AlertDialogTitle>
-              <AlertDialogDescription>
-                Bạn có chắc chắn muốn xóa khóa học này? 
-                Hành động này không thể hoàn tác và sẽ xóa tất cả dữ liệu liên quan.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Hủy</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => deletingCourse && handleDeleteCourse(deletingCourse)}
-                className="bg-red-600 hover:bg-red-700"
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Xóa khóa học
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Manage Students Dialog */}
-        {selectedCourse && (
-          <ManageStudentsDialog
-            courseId={selectedCourse.id}
-            courseName={selectedCourse.title}
-            open={manageStudentsOpen}
-            onOpenChange={setManageStudentsOpen}
-          />
-        )}
       </div>
+
+      {/* Delete Course Dialog */}
+      <AlertDialog open={!!deletingCourse} onOpenChange={() => setDeletingCourse(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa khóa học</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa khóa học này? 
+              Hành động này không thể hoàn tác và sẽ xóa tất cả dữ liệu liên quan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingCourse && handleDeleteCourse(deletingCourse)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Xóa khóa học
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Manage Students Dialog */}
+      {selectedCourse && (
+        <ManageStudentsDialog
+          open={manageStudentsOpen}
+          onOpenChange={setManageStudentsOpen}
+          courseId={selectedCourse.id}
+          courseTitle={selectedCourse.title}
+        />
+      )}
     </DashboardLayout>
   );
 };

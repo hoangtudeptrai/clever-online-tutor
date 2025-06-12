@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,26 +41,42 @@ export const useAssignments = () => {
   return useQuery({
     queryKey: ['assignments', profile?.id],
     queryFn: async () => {
+      // Fetch assignments first
       let query = supabase
         .from('assignments')
-        .select(`
-          *,
-          course:courses(id, title, instructor_id),
-          creator:profiles!assignments_created_by_fkey(id, full_name)
-        `);
+        .select('*');
 
       if (profile?.role === 'student') {
         query = query.eq('assignment_status', 'published');
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data: assignments, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Fetch related data in parallel
+      const [coursesData, creatorsData] = await Promise.all([
+        // Get courses
+        supabase
+          .from('courses')
+          .select('id, title, instructor_id')
+          .in('id', assignments.map(a => a.course_id)),
+        // Get creators
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', assignments.map(a => a.created_by))
+      ]);
+
+      // Create lookup maps
+      const coursesMap = new Map(coursesData.data?.map(c => [c.id, c]));
+      const creatorsMap = new Map(creatorsData.data?.map(c => [c.id, c]));
       
       // Transform the data to match our Assignment interface
-      return data?.map((item: any) => ({
+      return assignments.map((item: any) => ({
         ...item,
-        creator: Array.isArray(item.creator) ? item.creator[0] : item.creator
+        course: coursesMap.get(item.course_id),
+        creator: creatorsMap.get(item.created_by)
       })) as Assignment[];
     },
     enabled: !!profile,
@@ -74,37 +89,61 @@ export const useAssignmentWithSubmissions = (assignmentId: string) => {
   return useQuery({
     queryKey: ['assignment', assignmentId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch assignment first
+      const { data: assignment, error } = await supabase
         .from('assignments')
-        .select(`
-          *,
-          course:courses(id, title, instructor_id),
-          creator:profiles!assignments_created_by_fkey(id, full_name),
-          submissions:assignment_submissions(
-            id,
-            status,
-            submitted_at,
-            grade,
-            feedback,
-            student:profiles!assignment_submissions_student_id_fkey(full_name)
-          )
-        `)
+        .select('*')
         .eq('id', assignmentId)
         .single();
 
       if (error) throw error;
+
+      // Fetch related data in parallel
+      const [courseData, creatorData, submissionsData] = await Promise.all([
+        // Get course
+        supabase
+          .from('courses')
+          .select('id, title, instructor_id')
+          .eq('id', assignment.course_id)
+          .single(),
+        // Get creator
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('id', assignment.created_by)
+          .single(),
+        // Get submissions with students
+        supabase
+          .from('assignment_submissions')
+          .select('id, status, submitted_at, grade, feedback, student_id')
+          .eq('assignment_id', assignmentId)
+      ]);
+
+      // If we have submissions, fetch student profiles
+      let studentsData = { data: [] };
+      if (submissionsData.data?.length > 0) {
+        studentsData = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', submissionsData.data.map(s => s.student_id));
+      }
+
+      // Create a map of student profiles
+      const studentsMap = new Map(studentsData.data?.map(s => [s.id, s]));
+
+      // Transform submissions data
+      const transformedSubmissions = submissionsData.data?.map(submission => ({
+        ...submission,
+        student: studentsMap.get(submission.student_id)
+      }));
       
-      // Transform the data to match our Assignment interface
-      const transformedData = {
-        ...data,
-        creator: Array.isArray(data.creator) ? data.creator[0] : data.creator,
-        submissions: data.submissions?.map((submission: any) => ({
-          ...submission,
-          student: Array.isArray(submission.student) ? submission.student[0] : submission.student
-        }))
-      };
-      
-      return transformedData as Assignment;
+      // Return transformed data
+      return {
+        ...assignment,
+        course: courseData.data,
+        creator: creatorData.data,
+        submissions: transformedSubmissions
+      } as Assignment;
     },
     enabled: !!assignmentId && !!profile,
   });
@@ -148,6 +187,49 @@ export const useCreateAssignment = () => {
       toast({
         title: "Lỗi",
         description: "Không thể tạo bài tập mới",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useUpdateAssignment = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: {
+      id: string;
+      title: string;
+      description?: string;
+      course_id: string;
+      due_date?: string;
+      max_score?: number;
+      assignment_status?: 'draft' | 'published' | 'archived';
+    }) => {
+      const { id, ...updateData } = data;
+      const { data: result, error } = await supabase
+        .from('assignments')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật bài tập thành công",
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating assignment:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật bài tập",
         variant: "destructive",
       });
     },

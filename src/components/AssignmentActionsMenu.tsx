@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MoreVertical, Edit, Trash2, Eye, Play, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -24,50 +23,31 @@ import { Badge } from '@/components/ui/badge';
 import EditAssignmentDialog from './EditAssignmentDialog';
 import { useDeleteAssignment } from '@/hooks/useDeleteAssignment';
 import { useUpdateAssignmentStatus } from '@/hooks/useUpdateAssignmentStatus';
+import { Assignment } from '@/hooks/useAssignments';
 
 interface AssignmentActionsMenuProps {
-  assignment: {
-    id: string;
-    title: string;
-    description?: string;
-    course?: {
-      title: string;
-    };
-    due_date?: string;
-    max_score?: number;
-    assignment_status?: 'draft' | 'published' | 'archived';
-    created_at: string;
-  };
+  assignment: Assignment;
 }
 
 const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignment }) => {
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
-  
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const deleteAssignmentMutation = useDeleteAssignment();
-  const updateStatusMutation = useUpdateAssignmentStatus();
+  const updateAssignmentStatusMutation = useUpdateAssignmentStatus();
 
   const handleDelete = () => {
-    deleteAssignmentMutation.mutate(assignment.id);
-    setShowDeleteDialog(false);
-  };
-
-  const handleView = () => {
-    navigate(`/dashboard/assignments/${assignment.id}`);
-  };
-
-  const handlePublish = () => {
-    updateStatusMutation.mutate({ 
-      assignmentId: assignment.id, 
-      status: 'published' 
+    deleteAssignmentMutation.mutate(assignment.id, {
+      onSuccess: () => {
+        setShowDeleteDialog(false);
+      }
     });
   };
 
-  const handleArchive = () => {
-    updateStatusMutation.mutate({ 
-      assignmentId: assignment.id, 
-      status: 'archived' 
+  const handleStatusChange = (status: 'draft' | 'published' | 'archived') => {
+    updateAssignmentStatusMutation.mutate({
+      assignmentId: assignment.id,
+      status
     });
   };
 
@@ -111,57 +91,45 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Mở menu</span>
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-white">
-          <DropdownMenuItem onClick={handleView}>
-            <Eye className="h-4 w-4 mr-2" />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => navigate(`/dashboard/assignments/${assignment.id}`)}>
+            <Eye className="mr-2 h-4 w-4" />
             Xem chi tiết
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
-            <Edit className="h-4 w-4 mr-2" />
+            <Edit className="mr-2 h-4 w-4" />
             Chỉnh sửa
           </DropdownMenuItem>
-          
           <DropdownMenuSeparator />
-          
           {assignment.assignment_status === 'draft' && (
-            <DropdownMenuItem onClick={handlePublish}>
-              <Play className="h-4 w-4 mr-2" />
-              Kích hoạt bài tập
+            <DropdownMenuItem onClick={() => handleStatusChange('published')}>
+              <Play className="mr-2 h-4 w-4" />
+              Xuất bản
             </DropdownMenuItem>
           )}
-          
           {assignment.assignment_status === 'published' && (
-            <DropdownMenuItem onClick={handleArchive}>
-              <Archive className="h-4 w-4 mr-2" />
+            <DropdownMenuItem onClick={() => handleStatusChange('archived')}>
+              <Archive className="mr-2 h-4 w-4" />
               Lưu trữ
             </DropdownMenuItem>
           )}
-          
-          <DropdownMenuSeparator />
-          
-          <DropdownMenuItem 
+          <DropdownMenuItem
+            className="text-red-600"
             onClick={() => setShowDeleteDialog(true)}
-            className="text-red-600 focus:text-red-600"
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Xóa bài tập
+            <Trash2 className="mr-2 h-4 w-4" />
+            Xóa
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <EditAssignmentDialog
-        assignment={{
-          id: assignment.id,
-          title: assignment.title,
-          description: assignment.description || '',
-          course: assignment.course?.title || '',
-          dueDate: assignment.due_date || '',
-          maxScore: getMaxScore(assignment.max_score)
-        }}
+        assignment={assignment}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />
@@ -169,20 +137,18 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa bài tập</AlertDialogTitle>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa bài tập "{assignment.title}"? 
-              Hành động này không thể hoàn tác và sẽ xóa tất cả bài nộp của học sinh.
+              Hành động này không thể hoàn tác. Bài tập này sẽ bị xóa vĩnh viễn khỏi hệ thống.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete} 
+            <AlertDialogAction
+              onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
-              disabled={deleteAssignmentMutation.isPending}
             >
-              {deleteAssignmentMutation.isPending ? 'Đang xóa...' : 'Xóa bài tập'}
+              Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

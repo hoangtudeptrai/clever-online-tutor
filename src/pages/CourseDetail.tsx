@@ -24,6 +24,7 @@ import DocumentActionsMenu from '@/components/DocumentActionsMenu';
 import { Link } from 'react-router-dom';
 import { useCourses } from '@/hooks/useCourses';
 import { useAssignments } from '@/hooks/useAssignments';
+import { useCourseAssignments } from '@/hooks/useCourseAssignments';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useCourseStudents } from '@/hooks/useStudents';
 import { useToast } from '@/hooks/use-toast';
@@ -37,24 +38,20 @@ const CourseDetail = () => {
 
   // Fetch real data from database
   const { data: courses } = useCourses();
-  const { data: assignments, isLoading: assignmentsLoading } = useAssignments();
+  const { data: assignments } = useAssignments();
+  const { data: courseAssignments, isLoading: assignmentsLoading } = useCourseAssignments(courseId || '');
   const { data: documents } = useDocuments();
   const { data: courseStudents } = useCourseStudents(courseId || '');
 
   // Find current course
   const course = courses?.find(c => c.id === courseId);
 
-  // Filter assignments for this course - handle both course_id and course?.id
-  const courseAssignments = assignments?.filter(a => 
-    a.course_id === courseId || a.course?.id === courseId
-  ) || [];
-
   // Filter documents for this course
   const courseDocuments = documents?.filter(d => d.course_id === courseId) || [];
 
   // Calculate course statistics
   const studentsCount = courseStudents?.length || 0;
-  const assignmentsCount = courseAssignments.length;
+  const assignmentsCount = courseAssignments?.length || 0;
   const lessonsCount = course?.lessons_count || 0;
   const avgProgress = courseStudents?.reduce((acc, student) => acc + (student.progress || 0), 0) / (studentsCount || 1) || 0;
 
@@ -116,15 +113,12 @@ const CourseDetail = () => {
     }
   };
 
-  const filteredAssignments = courseAssignments.filter(assignment =>
+  const filteredAssignments = courseAssignments?.filter(assignment =>
     assignment.title.toLowerCase().includes(searchAssignments.toLowerCase()) ||
     (assignment.description && assignment.description.toLowerCase().includes(searchAssignments.toLowerCase()))
-  );
+  ) || [];
 
-  const filteredDocuments = courseDocuments.filter(doc =>
-    doc.title.toLowerCase().includes(searchDocuments.toLowerCase()) ||
-    (doc.file_type && doc.file_type.toLowerCase().includes(searchDocuments.toLowerCase()))
-  );
+  const filteredDocuments = documents?.filter(d => d.course_id === courseId) || [];
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'N/A';

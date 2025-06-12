@@ -26,12 +26,16 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
-const CreateAssignmentDialog = () => {
+interface CreateAssignmentDialogProps {
+  courseId?: string;
+}
+
+const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    course_id: '',
+    course_id: courseId || '',
     due_date: '',
     max_score: '10',
     instructions: '',
@@ -84,7 +88,7 @@ const CreateAssignmentDialog = () => {
       setFormData({
         title: '',
         description: '',
-        course_id: '',
+        course_id: courseId || '',
         due_date: '',
         max_score: '10',
         instructions: '',
@@ -162,21 +166,23 @@ const CreateAssignmentDialog = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Khóa học *</Label>
-                <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn khóa học" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tutorCourses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!courseId && (
+                <div>
+                  <Label htmlFor="course-select">Khóa học *</Label>
+                  <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
+                    <SelectTrigger id="course-select" aria-label="Chọn khóa học">
+                      <SelectValue placeholder="Chọn khóa học" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tutorCourses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label htmlFor="due-date">Hạn nộp</Label>
                 <div className="relative">
@@ -185,6 +191,7 @@ const CreateAssignmentDialog = () => {
                     type="date"
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    aria-label="Chọn hạn nộp"
                   />
                   <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
                 </div>
@@ -197,6 +204,7 @@ const CreateAssignmentDialog = () => {
                   value={formData.max_score}
                   onChange={(e) => setFormData({ ...formData, max_score: e.target.value })}
                   placeholder="10"
+                  aria-label="Nhập điểm tối đa"
                 />
               </div>
             </div>

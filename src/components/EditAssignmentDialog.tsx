@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -18,57 +17,60 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useUpdateAssignment } from '@/hooks/useUpdateAssignment';
+import { useUpdateAssignment } from '@/hooks/useAssignments';
 import { useCourses } from '@/hooks/useCourses';
+import { Assignment } from '@/hooks/useAssignments';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface EditAssignmentDialogProps {
-  assignment: {
-    id: string;
-    title: string;
-    description: string;
-    course: string;
-    dueDate: string;
-    maxScore: number;
-  };
+  assignment: Assignment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment, open, onOpenChange }) => {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     title: assignment.title,
-    description: assignment.description,
-    course_id: '',
-    dueDate: assignment.dueDate,
-    maxScore: assignment.maxScore.toString()
+    description: assignment.description || '',
+    course_id: assignment.course_id,
+    due_date: assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '',
+    max_score: assignment.max_score?.toString() || '100'
   });
 
   const updateAssignmentMutation = useUpdateAssignment();
   const { data: courses } = useCourses();
 
   useEffect(() => {
-    if (courses && assignment.course) {
-      const course = courses.find(c => c.title === assignment.course);
-      if (course) {
-        setFormData(prev => ({ ...prev, course_id: course.id }));
-      }
+    if (assignment) {
+      setFormData({
+        title: assignment.title,
+        description: assignment.description || '',
+        course_id: assignment.course_id,
+        due_date: assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '',
+        max_score: assignment.max_score?.toString() || '100'
+      });
     }
-  }, [courses, assignment.course]);
+  }, [assignment]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     updateAssignmentMutation.mutate({
-      assignmentId: assignment.id,
-      assignmentData: {
-        title: formData.title,
-        description: formData.description,
-        course_id: formData.course_id,
-        due_date: formData.dueDate || null,
-        max_score: parseInt(formData.maxScore)
-      }
+      id: assignment.id,
+      title: formData.title,
+      description: formData.description,
+      course_id: formData.course_id,
+      due_date: formData.due_date || null,
+      max_score: parseInt(formData.max_score),
+      assignment_status: assignment.assignment_status
     }, {
       onSuccess: () => {
+        // Invalidate relevant queries
+        queryClient.invalidateQueries({ queryKey: ['assignments'] });
+        queryClient.invalidateQueries({ queryKey: ['course-assignments'] });
+        queryClient.invalidateQueries({ queryKey: ['assignment', assignment.id] });
+        // Close dialog
         onOpenChange(false);
       }
     });
@@ -128,24 +130,24 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="dueDate">Hạn nộp</Label>
+              <Label htmlFor="due_date">Hạn nộp</Label>
               <Input
-                id="dueDate"
+                id="due_date"
                 type="datetime-local"
-                value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                value={formData.due_date}
+                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="maxScore">Điểm tối đa *</Label>
+              <Label htmlFor="max_score">Điểm tối đa *</Label>
               <Input
-                id="maxScore"
+                id="max_score"
                 type="number"
                 min="1"
                 max="1000"
-                value={formData.maxScore}
-                onChange={(e) => setFormData({ ...formData, maxScore: e.target.value })}
+                value={formData.max_score}
+                onChange={(e) => setFormData({ ...formData, max_score: e.target.value })}
                 placeholder="100"
                 required
               />
