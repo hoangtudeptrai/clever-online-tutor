@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Calendar, Download, Filter, TrendingUp, Users, Award, FileText } from 'lucide-react';
@@ -68,20 +69,34 @@ const Reports = () => {
           title,
           assignments (
             id,
-            status,
-            grade
+            assignment_submissions (
+              id,
+              status,
+              grade
+            )
           ),
-          enrollments (
+          course_enrollments (
             id
           )
         `);
 
-      return courses?.map(course => ({
-        course: course.title,
-        students: course.enrollments?.length || 0,
-        avgGrade: course.assignments?.reduce((acc, curr) => acc + (curr.grade || 0), 0) / (course.assignments?.length || 1),
-        completed: (course.assignments?.filter(a => a.status === 'completed').length || 0) * 100 / (course.assignments?.length || 1)
-      })) || [];
+      return courses?.map(course => {
+        const submissions = course.assignments?.flatMap(a => a.assignment_submissions || []) || [];
+        const completedSubmissions = submissions.filter(s => s.status === 'completed');
+        const avgGrade = submissions.length > 0 
+          ? submissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / submissions.length 
+          : 0;
+        const completionRate = submissions.length > 0 
+          ? (completedSubmissions.length * 100) / submissions.length 
+          : 0;
+
+        return {
+          course: course.title,
+          students: course.course_enrollments?.length || 0,
+          avgGrade,
+          completed: completionRate
+        };
+      }) || [];
     },
   });
 
@@ -89,8 +104,8 @@ const Reports = () => {
   const { data: gradeDistribution } = useQuery({
     queryKey: ['grade-distribution'],
     queryFn: async () => {
-      const { data: assignments } = await supabase
-        .from('assignments')
+      const { data: submissions } = await supabase
+        .from('assignment_submissions')
         .select('grade')
         .not('grade', 'is', null);
 
@@ -102,8 +117,8 @@ const Reports = () => {
         '<6': { grade: '<6', count: 0, color: '#6B7280' }
       };
 
-      assignments?.forEach(assignment => {
-        const grade = assignment.grade;
+      submissions?.forEach(submission => {
+        const grade = submission.grade;
         if (grade >= 9) distribution['9-10'].count++;
         else if (grade >= 8) distribution['8-8.9'].count++;
         else if (grade >= 7) distribution['7-7.9'].count++;
@@ -137,28 +152,29 @@ const Reports = () => {
           break;
       }
 
-      const { data: assignments } = await supabase
-        .from('assignments')
-        .select('created_at, grade')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', now.toISOString())
-        .order('created_at');
+      const { data: submissions } = await supabase
+        .from('assignment_submissions')
+        .select('submitted_at, grade')
+        .gte('submitted_at', startDate.toISOString())
+        .lte('submitted_at', now.toISOString())
+        .not('submitted_at', 'is', null)
+        .order('submitted_at');
 
       const monthlyData: { [key: string]: { submissions: number; totalGrade: number } } = {};
 
-      assignments?.forEach(assignment => {
-        const month = new Date(assignment.created_at).toLocaleDateString('vi-VN', { month: 'short' });
+      submissions?.forEach(submission => {
+        const month = new Date(submission.submitted_at).toLocaleDateString('vi-VN', { month: 'short' });
         if (!monthlyData[month]) {
           monthlyData[month] = { submissions: 0, totalGrade: 0 };
         }
         monthlyData[month].submissions++;
-        monthlyData[month].totalGrade += assignment.grade || 0;
+        monthlyData[month].totalGrade += submission.grade || 0;
       });
 
       return Object.entries(monthlyData).map(([month, data]) => ({
         month,
         submissions: data.submissions,
-        avgGrade: data.totalGrade / data.submissions
+        avgGrade: data.submissions > 0 ? data.totalGrade / data.submissions : 0
       }));
     },
   });
@@ -172,7 +188,7 @@ const Reports = () => {
         .select(`
           id,
           full_name,
-          assignments (
+          assignment_submissions!assignment_submissions_student_id_fkey (
             id,
             grade,
             status
@@ -182,12 +198,22 @@ const Reports = () => {
         .order('full_name');
 
       return students
-        ?.map(student => ({
-          name: student.full_name,
-          grade: student.assignments?.reduce((acc, curr) => acc + (curr.grade || 0), 0) / (student.assignments?.length || 1),
-          assignments: student.assignments?.length || 0,
-          completion: (student.assignments?.filter(a => a.status === 'completed').length || 0) * 100 / (student.assignments?.length || 1)
-        }))
+        ?.map(student => {
+          const submissions = student.assignment_submissions || [];
+          const avgGrade = submissions.length > 0 
+            ? submissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / submissions.length 
+            : 0;
+          const completionRate = submissions.length > 0 
+            ? (submissions.filter(s => s.status === 'completed').length * 100) / submissions.length 
+            : 0;
+
+          return {
+            name: student.full_name,
+            grade: avgGrade,
+            assignments: submissions.length,
+            completion: completionRate
+          };
+        })
         .sort((a, b) => b.grade - a.grade)
         .slice(0, 5) || [];
     },
