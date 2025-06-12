@@ -97,7 +97,11 @@ export const useAssignmentWithSubmissions = (assignmentId: string) => {
       // Transform the data to match our Assignment interface
       const transformedData = {
         ...data,
-        creator: Array.isArray(data.creator) ? data.creator[0] : data.creator
+        creator: Array.isArray(data.creator) ? data.creator[0] : data.creator,
+        submissions: data.submissions?.map((submission: any) => ({
+          ...submission,
+          student: Array.isArray(submission.student) ? submission.student[0] : submission.student
+        }))
       };
       
       return transformedData as Assignment;
