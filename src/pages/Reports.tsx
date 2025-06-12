@@ -82,12 +82,12 @@ const Reports = () => {
 
       return courses?.map(course => {
         const submissions = course.assignments?.flatMap(a => a.assignment_submissions || []) || [];
-        const completedSubmissions = submissions.filter(s => s.status === 'completed');
-        const avgGrade = submissions.length > 0 
-          ? submissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / submissions.length 
+        const gradedSubmissions = submissions.filter(s => s.status === 'graded');
+        const avgGrade = gradedSubmissions.length > 0 
+          ? gradedSubmissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / gradedSubmissions.length 
           : 0;
         const completionRate = submissions.length > 0 
-          ? (completedSubmissions.length * 100) / submissions.length 
+          ? (gradedSubmissions.length * 100) / submissions.length 
           : 0;
 
         return {
@@ -183,39 +183,47 @@ const Reports = () => {
   const { data: topStudents } = useQuery({
     queryKey: ['top-students'],
     queryFn: async () => {
-      const { data: students } = await supabase
+      const { data: students, error } = await supabase
         .from('profiles')
         .select(`
           id,
-          full_name,
-          assignment_submissions!assignment_submissions_student_id_fkey (
-            id,
-            grade,
-            status
-          )
+          full_name
         `)
-        .eq('role', 'student')
-        .order('full_name');
+        .eq('role', 'student');
 
-      return students
-        ?.map(student => {
-          const submissions = student.assignment_submissions || [];
-          const avgGrade = submissions.length > 0 
-            ? submissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / submissions.length 
+      if (error) {
+        console.error('Error fetching students:', error);
+        return [];
+      }
+
+      // Fetch submissions for each student separately
+      const studentsWithStats = await Promise.all(
+        (students || []).map(async (student) => {
+          const { data: submissions } = await supabase
+            .from('assignment_submissions')
+            .select('grade, status')
+            .eq('student_id', student.id);
+
+          const studentSubmissions = submissions || [];
+          const avgGrade = studentSubmissions.length > 0 
+            ? studentSubmissions.reduce((acc, curr) => acc + (curr.grade || 0), 0) / studentSubmissions.length 
             : 0;
-          const completionRate = submissions.length > 0 
-            ? (submissions.filter(s => s.status === 'completed').length * 100) / submissions.length 
+          const completionRate = studentSubmissions.length > 0 
+            ? (studentSubmissions.filter(s => s.status === 'graded').length * 100) / studentSubmissions.length 
             : 0;
 
           return {
             name: student.full_name,
             grade: avgGrade,
-            assignments: submissions.length,
+            assignments: studentSubmissions.length,
             completion: completionRate
           };
         })
+      );
+
+      return studentsWithStats
         .sort((a, b) => b.grade - a.grade)
-        .slice(0, 5) || [];
+        .slice(0, 5);
     },
   });
 
