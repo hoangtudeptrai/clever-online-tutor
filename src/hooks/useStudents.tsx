@@ -1,6 +1,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Student {
   id: string;
@@ -9,20 +11,35 @@ export interface Student {
   enrolled_at?: string;
   progress?: number;
   status?: string;
+  phone_number?: string;
+  avatar_url?: string;
+  created_at?: string;
+}
+
+export interface CourseStudent extends Student {
+  enrollment_id?: string;
+  course_id?: string;
 }
 
 export const useStudents = () => {
+  const { profile } = useAuth();
+
   return useQuery({
     queryKey: ['students'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
-        .eq('role', 'student');
+        .select('id, full_name, email, phone_number, avatar_url, created_at')
+        .eq('role', 'student')
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching students:', error);
+        throw error;
+      }
       return data as Student[];
     },
+    enabled: !!profile && profile.role === 'tutor',
   });
 };
 
@@ -30,39 +47,46 @@ export const useCourseStudents = (courseId: string) => {
   return useQuery({
     queryKey: ['course-students', courseId],
     queryFn: async () => {
-      // First get the enrollments
-      const { data: enrollments, error: enrollmentError } = await supabase
+      // First get the enrollments with student details
+      const { data: enrollments, error } = await supabase
         .from('course_enrollments')
-        .select('student_id, enrolled_at, progress, status')
-        .eq('course_id', courseId);
+        .select(`
+          id,
+          student_id,
+          enrolled_at,
+          progress,
+          status,
+          last_active,
+          student:profiles!course_enrollments_student_id_fkey(
+            id,
+            full_name,
+            email,
+            phone_number,
+            avatar_url
+          )
+        `)
+        .eq('course_id', courseId)
+        .order('enrolled_at', { ascending: false });
 
-      if (enrollmentError) throw enrollmentError;
-
-      if (!enrollments || enrollments.length === 0) {
-        return [];
+      if (error) {
+        console.error('Error fetching course students:', error);
+        throw error;
       }
 
-      // Then get the student profiles
-      const studentIds = enrollments.map(enrollment => enrollment.student_id);
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .in('id', studentIds);
-
-      if (profileError) throw profileError;
-
-      // Combine the data
-      return enrollments.map(enrollment => {
-        const profile = profiles?.find(p => p.id === enrollment.student_id);
-        return {
-          id: enrollment.student_id,
-          full_name: profile?.full_name || '',
-          email: profile?.email || '',
-          enrolled_at: enrollment.enrolled_at,
-          progress: enrollment.progress,
-          status: enrollment.status
-        };
-      }) as Student[];
+      // Transform the data to match our interface
+      return enrollments?.map(enrollment => ({
+        id: enrollment.student_id,
+        enrollment_id: enrollment.id,
+        course_id: courseId,
+        full_name: (enrollment.student as any)?.full_name || '',
+        email: (enrollment.student as any)?.email || '',
+        phone_number: (enrollment.student as any)?.phone_number || '',
+        avatar_url: (enrollment.student as any)?.avatar_url || '',
+        enrolled_at: enrollment.enrolled_at,
+        progress: enrollment.progress,
+        status: enrollment.status,
+        last_active: enrollment.last_active
+      })) as CourseStudent[] || [];
     },
     enabled: !!courseId,
   });
@@ -70,9 +94,22 @@ export const useCourseStudents = (courseId: string) => {
 
 export const useEnrollStudent = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ courseId, studentId }: { courseId: string; studentId: string }) => {
+      // Check if student is already enrolled
+      const { data: existing } = await supabase
+        .from('course_enrollments')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('student_id', studentId)
+        .single();
+
+      if (existing) {
+        throw new Error('Học sinh đã được đăng ký khóa học này');
+      }
+
       const { data, error } = await supabase
         .from('course_enrollments')
         .insert({
@@ -90,12 +127,24 @@ export const useEnrollStudent = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['course-students', variables.courseId] });
       queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast({
+        title: "Thành công",
+        description: "Đã thêm học sinh vào khóa học",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể thêm học sinh vào khóa học",
+        variant: "destructive",
+      });
     },
   });
 };
 
 export const useUnenrollStudent = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ courseId, studentId }: { courseId: string; studentId: string }) => {
@@ -110,6 +159,62 @@ export const useUnenrollStudent = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['course-students', variables.courseId] });
       queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast({
+        title: "Thành công",
+        description: "Đã hủy đăng ký học sinh khỏi khóa học",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể hủy đăng ký học sinh",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useUpdateStudentProgress = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ 
+      courseId, 
+      studentId, 
+      progress 
+    }: { 
+      courseId: string; 
+      studentId: string; 
+      progress: number;
+    }) => {
+      const { data, error } = await supabase
+        .from('course_enrollments')
+        .update({ 
+          progress: Math.max(0, Math.min(100, progress)),
+          last_active: new Date().toISOString()
+        })
+        .eq('course_id', courseId)
+        .eq('student_id', studentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['course-students', variables.courseId] });
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật tiến độ học tập",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật tiến độ học tập",
+        variant: "destructive",
+      });
     },
   });
 };

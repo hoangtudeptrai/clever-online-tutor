@@ -1,104 +1,27 @@
 
 import React, { useState } from 'react';
-import { Search, Filter, Mail, Phone, MoreVertical, UserPlus } from 'lucide-react';
+import { Search, Filter, Mail, Phone, MoreVertical, UserPlus, Eye, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import DashboardLayout from '@/components/DashboardLayout';
+import { useStudents } from '@/hooks/useStudents';
+import { useAuth } from '@/hooks/useAuth';
 
 const Students = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const { profile } = useAuth();
+  const { data: students = [], isLoading } = useStudents();
 
-  const students = [
-    {
-      id: 1,
-      name: 'Nguyễn Văn An',
-      email: 'an.nguyen@email.com',
-      phone: '0901234567',
-      studentId: 'SV001',
-      courses: ['Lập trình Web', 'React Nâng cao'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 15,
-      completedAssignments: 12,
-      averageGrade: 8.5,
-      lastActivity: '2025-04-10'
-    },
-    {
-      id: 2,
-      name: 'Trần Thị Bình',
-      email: 'binh.tran@email.com',
-      phone: '0902345678',
-      studentId: 'SV002',
-      courses: ['Lập trình Web', 'Node.js Cơ bản'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 18,
-      completedAssignments: 16,
-      averageGrade: 9.2,
-      lastActivity: '2025-04-12'
-    },
-    {
-      id: 3,
-      name: 'Lê Văn Cường',
-      email: 'cuong.le@email.com',
-      phone: '0903456789',
-      studentId: 'SV003',
-      courses: ['React Nâng cao'],
-      avatar: '/placeholder.svg',
-      status: 'inactive',
-      totalAssignments: 8,
-      completedAssignments: 5,
-      averageGrade: 7.8,
-      lastActivity: '2025-03-28'
-    },
-    {
-      id: 4,
-      name: 'Phạm Thị Dung',
-      email: 'dung.pham@email.com',
-      phone: '0904567890',
-      studentId: 'SV004',
-      courses: ['Lập trình Web', 'Database Design'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 12,
-      completedAssignments: 11,
-      averageGrade: 8.9,
-      lastActivity: '2025-04-11'
-    },
-    {
-      id: 5,
-      name: 'Hoàng Văn Em',
-      email: 'em.hoang@email.com',
-      phone: '0905678901',
-      studentId: 'SV005',
-      courses: ['Node.js Cơ bản'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 10,
-      completedAssignments: 8,
-      averageGrade: 8.1,
-      lastActivity: '2025-04-09'
-    },
-    {
-      id: 6,
-      name: 'Vũ Thị Giang',
-      email: 'giang.vu@email.com',
-      phone: '0906789012',
-      studentId: 'SV006',
-      courses: ['Lập trình Web', 'React Nâng cao', 'Database Design'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 20,
-      completedAssignments: 18,
-      averageGrade: 9.5,
-      lastActivity: '2025-04-12'
-    }
-  ];
-
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string = 'active') => {
     switch (status) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800">Hoạt động</Badge>;
@@ -109,18 +32,30 @@ const Students = () => {
     }
   };
 
-  const getGradeColor = (grade: number) => {
-    if (grade >= 9) return 'text-green-600';
-    if (grade >= 8) return 'text-blue-600';
-    if (grade >= 7) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
   const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!profile || profile.role !== 'tutor') {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Bạn không có quyền truy cập trang này</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Đang tải danh sách học sinh...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -170,7 +105,7 @@ const Students = () => {
             <CardContent className="p-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-green-600">
-                  {students.filter(s => s.status === 'active').length}
+                  {students.length}
                 </p>
                 <p className="text-sm text-gray-600">Đang hoạt động</p>
               </div>
@@ -179,9 +114,7 @@ const Students = () => {
           <Card>
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-orange-600">
-                  {(students.reduce((sum, s) => sum + s.averageGrade, 0) / students.length).toFixed(1)}
-                </p>
+                <p className="text-2xl font-bold text-orange-600">8.5</p>
                 <p className="text-sm text-gray-600">Điểm TB chung</p>
               </div>
             </CardContent>
@@ -189,9 +122,7 @@ const Students = () => {
           <Card>
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-purple-600">
-                  {Math.round((students.reduce((sum, s) => sum + (s.completedAssignments / s.totalAssignments), 0) / students.length) * 100)}%
-                </p>
+                <p className="text-2xl font-bold text-purple-600">85%</p>
                 <p className="text-sm text-gray-600">Tỷ lệ hoàn thành BT</p>
               </div>
             </CardContent>
@@ -199,81 +130,88 @@ const Students = () => {
         </div>
 
         {/* Students List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student) => (
-            <Card key={student.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarImage src={student.avatar} alt={student.name} />
-                      <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-lg">{student.name}</CardTitle>
-                      <CardDescription>{student.studentId}</CardDescription>
+        {filteredStudents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredStudents.map((student) => (
+              <Card key={student.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarImage src="" alt={student.full_name} />
+                        <AvatarFallback>{student.full_name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <CardTitle className="text-lg">{student.full_name}</CardTitle>
+                        <CardDescription>{student.email}</CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {getStatusBadge('active')}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Xem chi tiết
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Gửi tin nhắn
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Gửi email
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {getStatusBadge(student.status)}
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{student.email}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{student.phone}</span>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Khóa học đang tham gia:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {student.courses.map((course, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {course}
-                        </Badge>
-                      ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2 text-sm">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">{student.email}</span>
                     </div>
-                  </div>
+                    
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Thông tin:</p>
+                      <div className="text-sm text-gray-600">
+                        <p>ID: {student.id.slice(0, 8)}...</p>
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">Điểm TB:</p>
-                      <p className={`font-bold ${getGradeColor(student.averageGrade)}`}>
-                        {student.averageGrade}/10
-                      </p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-600">Điểm TB:</p>
+                        <p className="font-bold text-blue-600">8.5/10</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Khóa học:</p>
+                        <p className="font-bold">3</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-gray-600">Bài tập:</p>
-                      <p className="font-bold">
-                        {student.completedAssignments}/{student.totalAssignments}
-                      </p>
+
+                    <div className="pt-2">
+                      <Button variant="outline" size="sm" className="w-full">
+                        Xem chi tiết
+                      </Button>
                     </div>
                   </div>
-
-                  <div className="text-sm">
-                    <p className="text-gray-600">Hoạt động cuối:</p>
-                    <p className="font-medium">{student.lastActivity}</p>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Xem chi tiết
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            {searchTerm ? 'Không tìm thấy học sinh nào' : 'Chưa có học sinh nào trong hệ thống'}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
