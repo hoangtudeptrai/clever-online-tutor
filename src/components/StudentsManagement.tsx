@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus, Search, MoreVertical, UserMinus, Mail, Eye } from 'lucide-react';
@@ -33,16 +32,21 @@ import {
 import ManageStudentsDialog from './ManageStudentsDialog';
 import { useCourseStudents, useUnenrollStudent } from '@/hooks/useStudents';
 import { useToast } from '@/hooks/use-toast';
+import { useCourses } from '@/hooks/useCourses';
 
 const StudentsManagement = () => {
   const { courseId } = useParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [showUnenrollDialog, setShowUnenrollDialog] = useState(false);
+  const [showManageDialog, setShowManageDialog] = useState(false);
   const { toast } = useToast();
 
   const { data: students, isLoading } = useCourseStudents(courseId || '');
+  const { data: courses } = useCourses();
   const unenrollStudent = useUnenrollStudent();
+
+  const currentCourse = courses?.find(course => course.id === courseId);
 
   const filteredStudents = students?.filter(student =>
     student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,7 +121,10 @@ const StudentsManagement = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Quản lý học sinh ({students?.length || 0})</CardTitle>
-            <ManageStudentsDialog />
+            <Button onClick={() => setShowManageDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Quản lý học sinh
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -205,6 +212,14 @@ const StudentsManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Manage Students Dialog */}
+      <ManageStudentsDialog
+        courseId={courseId || ''}
+        courseName={currentCourse?.title || 'Khóa học'}
+        open={showManageDialog}
+        onOpenChange={setShowManageDialog}
+      />
 
       {/* Unenroll Confirmation Dialog */}
       <AlertDialog open={showUnenrollDialog} onOpenChange={setShowUnenrollDialog}>
