@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Upload, X, Calendar } from 'lucide-react';
 import {
@@ -63,28 +62,17 @@ const CreateAssignmentDialog = () => {
     }
 
     try {
-      // Upload các file đính kèm
-      const uploadedFiles = [];
-      for (const file of formData.attachments) {
-        const uploadResult = await uploadFile(file, 'assignment-files');
-        if (uploadResult) {
-          uploadedFiles.push({
-            file_name: file.name,
-            file_path: uploadResult.path,
-            file_size: file.size,
-            file_type: file.type
-          });
-        }
-      }
+      // Combine description and instructions into description field
+      const combinedDescription = formData.description 
+        ? `${formData.description}\n\nHướng dẫn:\n${formData.instructions}`
+        : formData.instructions;
 
       await createAssignmentMutation.mutateAsync({
         title: formData.title,
-        description: formData.description,
+        description: combinedDescription,
         course_id: formData.course_id,
-        due_date: formData.due_date ? new Date(formData.due_date).toISOString() : null,
+        due_date: formData.due_date ? new Date(formData.due_date).toISOString() : undefined,
         max_score: parseInt(formData.max_score),
-        instructions: formData.instructions,
-        attachments: uploadedFiles
       });
 
       toast({

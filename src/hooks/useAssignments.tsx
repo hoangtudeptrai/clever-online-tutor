@@ -14,7 +14,7 @@ export interface Assignment {
   created_at: string;
   updated_at: string;
   max_score?: number;
-  assignment_status?: string;
+  assignment_status?: 'draft' | 'published' | 'archived';
   course?: {
     id: string;
     title: string;
@@ -57,7 +57,12 @@ export const useAssignments = () => {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Assignment[];
+      
+      // Transform the data to match our Assignment interface
+      return data?.map((item: any) => ({
+        ...item,
+        creator: Array.isArray(item.creator) ? item.creator[0] : item.creator
+      })) as Assignment[];
     },
     enabled: !!profile,
   });
@@ -88,7 +93,14 @@ export const useAssignmentWithSubmissions = (assignmentId: string) => {
         .single();
 
       if (error) throw error;
-      return data as Assignment;
+      
+      // Transform the data to match our Assignment interface
+      const transformedData = {
+        ...data,
+        creator: Array.isArray(data.creator) ? data.creator[0] : data.creator
+      };
+      
+      return transformedData as Assignment;
     },
     enabled: !!assignmentId && !!profile,
   });
