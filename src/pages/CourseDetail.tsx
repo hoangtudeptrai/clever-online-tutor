@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
@@ -22,165 +23,63 @@ import CreateDocumentDialog from '@/components/CreateDocumentDialog';
 import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
 import DocumentActionsMenu from '@/components/DocumentActionsMenu';
 import { Link } from 'react-router-dom';
-
-interface Document {
-  id: string;
-  title: string;
-  description?: string;
-  file_name: string;
-  file_path: string;
-  file_size?: number;
-  file_type?: string;
-  course_id: string;
-  uploaded_by: string;
-  created_at: string;
-  updated_at: string;
-  course?: {
-    title: string;
-  };
-  uploader?: {
-    full_name: string;
-    email: string;
-  };
-}
+import { useCourses } from '@/hooks/useCourses';
+import { useAssignments } from '@/hooks/useAssignments';
+import { useDocuments } from '@/hooks/useDocuments';
+import { useCourseStudents } from '@/hooks/useStudents';
+import { useToast } from '@/hooks/use-toast';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { toast } = useToast();
   const [searchAssignments, setSearchAssignments] = useState('');
   const [searchDocuments, setSearchDocuments] = useState('');
 
-  // Mock data cho khóa học
-  const course = {
-    id: parseInt(courseId || '1'),
-    title: 'Lập trình Web cơ bản',
-    description: 'Học HTML, CSS, JavaScript từ cơ bản đến nâng cao',
-    instructor: 'ThS. Nguyễn Văn A',
-    students: 30,
-    lessons: 24,
-    progress: 75,
-    status: 'active',
-    thumbnail: '/placeholder.svg',
-    duration: '12 tuần',
-    startDate: '2025-01-15',
-    endDate: '2025-04-15'
-  };
+  // Fetch real data from database
+  const { data: courses } = useCourses();
+  const { data: assignments } = useAssignments();
+  const { data: documents } = useDocuments();
+  const { data: courseStudents } = useCourseStudents(courseId || '');
 
-  // Mock data cho bài tập của khóa học - updated to match interface
-  const courseAssignments = [
-    {
-      id: '1',
-      title: 'Bài tập HTML cơ bản',
-      description: 'Tạo trang web đơn giản với HTML',
-      course: {
-        title: course.title
-      },
-      due_date: '2025-04-15',
-      maxGrade: 10,
-      submissions: 25,
-      status: 'active'
-    },
-    {
-      id: '2',
-      title: 'Thực hành CSS Flexbox',
-      description: 'Xây dựng layout responsive với Flexbox',
-      course: {
-        title: course.title
-      },
-      due_date: '2025-04-20',
-      maxGrade: 10,
-      submissions: 18,
-      status: 'active'
-    },
-    {
-      id: '3',
-      title: 'Dự án JavaScript',
-      description: 'Tạo ứng dụng web tương tác với JavaScript',
-      course: {
-        title: course.title
-      },
-      due_date: '2025-04-25',
-      maxGrade: 15,
-      submissions: 0,
-      status: 'draft'
-    }
-  ];
+  // Find current course
+  const course = courses?.find(c => c.id === courseId);
 
-  // Mock data cho tài liệu của khóa học
-  const courseDocuments: Document[] = [
-    {
-      id: '1',
-      title: 'Tài liệu hướng dẫn học',
-      description: 'Hướng dẫn chi tiết về cách học hiệu quả',
-      file_name: 'huong-dan-hoc.pdf',
-      file_path: '/documents/huong-dan-hoc.pdf',
-      file_size: 2621440, // 2.5MB
-      file_type: 'pdf',
-      course_id: courseId || '',
-      uploaded_by: 'user1',
-      created_at: '2025-03-15T00:00:00Z',
-      updated_at: '2025-03-15T00:00:00Z',
-      course: {
-        title: 'Khóa học mẫu'
-      },
-      uploader: {
-        full_name: 'Nguyễn Văn A',
-        email: 'nguyenvana@example.com'
-      }
-    },
-    {
-      id: '2',
-      title: 'Video bài giảng số 1',
-      description: 'Video bài giảng đầu tiên của khóa học',
-      file_name: 'bai-giang-1.mp4',
-      file_path: '/documents/bai-giang-1.mp4',
-      file_size: 131072000, // 125MB
-      file_type: 'mp4',
-      course_id: courseId || '',
-      uploaded_by: 'user2',
-      created_at: '2025-03-20T00:00:00Z',
-      updated_at: '2025-03-20T00:00:00Z',
-      course: {
-        title: 'Khóa học mẫu'
-      },
-      uploader: {
-        full_name: 'Trần Thị B',
-        email: 'tranthib@example.com'
-      }
-    },
-    {
-      id: '3',
-      title: 'Bài tập thực hành',
-      description: 'Tập hợp các bài tập thực hành',
-      file_name: 'bai-tap.pdf',
-      file_path: '/documents/bai-tap.pdf',
-      file_size: 8601600, // 8.2MB
-      file_type: 'pdf',
-      course_id: courseId || '',
-      uploaded_by: 'user3',
-      created_at: '2025-03-25T00:00:00Z',
-      updated_at: '2025-03-25T00:00:00Z',
-      course: {
-        title: 'Khóa học mẫu'
-      },
-      uploader: {
-        full_name: 'Lê Văn C',
-        email: 'levanc@example.com'
-      }
-    }
-  ];
+  // Filter assignments for this course
+  const courseAssignments = assignments?.filter(a => a.course_id === courseId) || [];
+
+  // Filter documents for this course
+  const courseDocuments = documents?.filter(d => d.course_id === courseId) || [];
+
+  // Calculate course statistics
+  const studentsCount = courseStudents?.length || 0;
+  const assignmentsCount = courseAssignments.length;
+  const lessonsCount = course?.lessons_count || 0;
+  const avgProgress = courseStudents?.reduce((acc, student) => acc + (student.progress || 0), 0) / (studentsCount || 1) || 0;
+
+  if (!course) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Không tìm thấy khóa học</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     const colors = {
       active: 'bg-green-100 text-green-800',
       draft: 'bg-yellow-100 text-yellow-800',
-      completed: 'bg-blue-100 text-blue-800'
+      published: 'bg-green-100 text-green-800',
+      archived: 'bg-gray-100 text-gray-800'
     };
     
     const labels = {
       active: 'Đang mở',
       draft: 'Nháp',
-      completed: 'Hoàn thành'
+      published: 'Đã xuất bản',
+      archived: 'Đã lưu trữ'
     };
     
     return (
@@ -207,12 +106,12 @@ const CourseDetail = () => {
 
   const filteredAssignments = courseAssignments.filter(assignment =>
     assignment.title.toLowerCase().includes(searchAssignments.toLowerCase()) ||
-    assignment.description.toLowerCase().includes(searchAssignments.toLowerCase())
+    (assignment.description && assignment.description.toLowerCase().includes(searchAssignments.toLowerCase()))
   );
 
   const filteredDocuments = courseDocuments.filter(doc =>
     doc.title.toLowerCase().includes(searchDocuments.toLowerCase()) ||
-    doc.file_type.toLowerCase().includes(searchDocuments.toLowerCase())
+    (doc.file_type && doc.file_type.toLowerCase().includes(searchDocuments.toLowerCase()))
   );
 
   const formatFileSize = (bytes?: number) => {
@@ -220,6 +119,10 @@ const CourseDetail = () => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
   return (
@@ -237,7 +140,7 @@ const CourseDetail = () => {
             <h1 className="text-3xl font-bold text-gray-900">{course.title}</h1>
             <p className="text-gray-600 mt-1">{course.description}</p>
           </div>
-          {user?.role === 'teacher' && (
+          {profile?.role === 'tutor' && (
             <div className="flex space-x-2">
               <Button variant="outline" size="sm">
                 <Edit className="h-4 w-4 mr-2" />
@@ -258,7 +161,7 @@ const CourseDetail = () => {
               <div className="flex items-center space-x-2">
                 <Users className="h-8 w-8 text-blue-600" />
                 <div>
-                  <p className="text-2xl font-bold">{course.students}</p>
+                  <p className="text-2xl font-bold">{studentsCount}</p>
                   <p className="text-sm text-gray-600">Học sinh</p>
                 </div>
               </div>
@@ -269,7 +172,7 @@ const CourseDetail = () => {
               <div className="flex items-center space-x-2">
                 <BookOpen className="h-8 w-8 text-green-600" />
                 <div>
-                  <p className="text-2xl font-bold">{course.lessons}</p>
+                  <p className="text-2xl font-bold">{lessonsCount}</p>
                   <p className="text-sm text-gray-600">Bài học</p>
                 </div>
               </div>
@@ -280,7 +183,7 @@ const CourseDetail = () => {
               <div className="flex items-center space-x-2">
                 <Clock className="h-8 w-8 text-purple-600" />
                 <div>
-                  <p className="text-2xl font-bold">{course.duration}</p>
+                  <p className="text-2xl font-bold">{course.duration || 'N/A'}</p>
                   <p className="text-sm text-gray-600">Thời lượng</p>
                 </div>
               </div>
@@ -290,11 +193,11 @@ const CourseDetail = () => {
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-green-600 font-bold">{course.progress}%</span>
+                  <span className="text-green-600 font-bold">{Math.round(avgProgress)}%</span>
                 </div>
                 <div>
                   <p className="text-2xl font-bold">Tiến độ</p>
-                  <p className="text-sm text-gray-600">Hoàn thành</p>
+                  <p className="text-sm text-gray-600">Trung bình</p>
                 </div>
               </div>
             </CardContent>
@@ -302,7 +205,7 @@ const CourseDetail = () => {
         </div>
 
         {/* Course Management Tabs */}
-        {user?.role === 'teacher' ? (
+        {profile?.role === 'tutor' ? (
           <Tabs defaultValue="students" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="students">Học sinh</TabsTrigger>
@@ -330,7 +233,7 @@ const CourseDetail = () => {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Quản lý bài tập</CardTitle>
+                    <CardTitle>Quản lý bài tập ({assignmentsCount})</CardTitle>
                     <CreateAssignmentDialog />
                   </div>
                 </CardHeader>
@@ -354,25 +257,32 @@ const CourseDetail = () => {
                           <TableHead>Mô tả</TableHead>
                           <TableHead>Hạn nộp</TableHead>
                           <TableHead>Điểm tối đa</TableHead>
-                          <TableHead>Bài nộp</TableHead>
                           <TableHead>Trạng thái</TableHead>
+                          <TableHead>Ngày tạo</TableHead>
                           <TableHead className="w-[100px]">Hành động</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredAssignments.map((assignment) => (
                           <TableRow key={assignment.id}>
-                            <TableCell className="font-medium">{assignment.title}</TableCell>
+                            <TableCell className="font-medium">
+                              <Link 
+                                to={`/dashboard/assignments/${assignment.id}`}
+                                className="text-blue-600 hover:underline"
+                              >
+                                {assignment.title}
+                              </Link>
+                            </TableCell>
                             <TableCell className="max-w-xs truncate">{assignment.description}</TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4 text-gray-400" />
-                                <span>{assignment.due_date}</span>
+                                <span>{assignment.due_date ? formatDate(assignment.due_date) : 'Không có'}</span>
                               </div>
                             </TableCell>
-                            <TableCell>{assignment.maxGrade} điểm</TableCell>
-                            <TableCell>{assignment.submissions}/{course.students}</TableCell>
-                            <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                            <TableCell>{assignment.max_score || 100} điểm</TableCell>
+                            <TableCell>{getStatusBadge(assignment.assignment_status || 'draft')}</TableCell>
+                            <TableCell>{formatDate(assignment.created_at)}</TableCell>
                             <TableCell>
                               <AssignmentActionsMenu assignment={assignment} />
                             </TableCell>
@@ -382,7 +292,7 @@ const CourseDetail = () => {
                     </Table>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      Không tìm thấy bài tập nào
+                      {searchAssignments ? 'Không tìm thấy bài tập nào' : 'Chưa có bài tập nào'}
                     </div>
                   )}
                 </CardContent>
@@ -393,7 +303,7 @@ const CourseDetail = () => {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Quản lý tài liệu</CardTitle>
+                    <CardTitle>Quản lý tài liệu ({courseDocuments.length})</CardTitle>
                     <CreateDocumentDialog />
                   </div>
                 </CardHeader>
@@ -415,7 +325,7 @@ const CourseDetail = () => {
                         <TableRow>
                           <TableHead>Tên tài liệu</TableHead>
                           <TableHead>Mô tả</TableHead>
-                          <TableHead>Danh mục</TableHead>
+                          <TableHead>Loại file</TableHead>
                           <TableHead>Kích thước</TableHead>
                           <TableHead>Người tạo</TableHead>
                           <TableHead>Ngày tạo</TableHead>
@@ -423,7 +333,7 @@ const CourseDetail = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredDocuments.map((document: Document) => (
+                        {filteredDocuments.map((document) => (
                           <TableRow key={document.id}>
                             <TableCell>
                               <div className="flex items-center space-x-2">
@@ -433,11 +343,11 @@ const CourseDetail = () => {
                             </TableCell>
                             <TableCell className="max-w-xs truncate">{document.description}</TableCell>
                             <TableCell>
-                              <Badge variant="outline">{document.file_type}</Badge>
+                              <Badge variant="outline">{document.file_type || 'unknown'}</Badge>
                             </TableCell>
                             <TableCell>{formatFileSize(document.file_size)}</TableCell>
                             <TableCell>{document.uploader?.full_name || 'Không xác định'}</TableCell>
-                            <TableCell>{new Date(document.created_at).toLocaleDateString('vi-VN')}</TableCell>
+                            <TableCell>{formatDate(document.created_at)}</TableCell>
                             <TableCell>
                               <DocumentActionsMenu document={document} />
                             </TableCell>
@@ -447,7 +357,7 @@ const CourseDetail = () => {
                     </Table>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      Không tìm thấy tài liệu nào
+                      {searchDocuments ? 'Không tìm thấy tài liệu nào' : 'Chưa có tài liệu nào'}
                     </div>
                   )}
                 </CardContent>
@@ -476,7 +386,7 @@ const CourseDetail = () => {
             <TabsContent value="assignments" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Bài tập của khóa học</CardTitle>
+                  <CardTitle>Bài tập của khóa học ({courseAssignments.filter(a => a.assignment_status === 'published').length})</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Search */}
@@ -489,12 +399,12 @@ const CourseDetail = () => {
 
                   {/* Assignments Grid for Students */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredAssignments.filter(a => a.status === 'active').map((assignment) => (
+                    {filteredAssignments.filter(a => a.assignment_status === 'published').map((assignment) => (
                       <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
                         <CardHeader>
                           <div className="flex items-start justify-between">
                             <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                            {getStatusBadge(assignment.status)}
+                            {getStatusBadge(assignment.assignment_status || 'draft')}
                           </div>
                         </CardHeader>
                         <CardContent>
@@ -503,18 +413,20 @@ const CourseDetail = () => {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Hạn nộp:</span>
-                              <span className="font-medium">{assignment.due_date}</span>
+                              <span className="font-medium">{assignment.due_date ? formatDate(assignment.due_date) : 'Không có'}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Điểm tối đa:</span>
-                              <span className="font-medium">{assignment.maxGrade} điểm</span>
+                              <span className="font-medium">{assignment.max_score || 100} điểm</span>
                             </div>
                           </div>
 
                           <div className="flex space-x-2 mt-4">
-                            <Button variant="outline" size="sm" className="flex-1">
-                              <Eye className="h-4 w-4 mr-1" />
-                              Xem chi tiết
+                            <Button variant="outline" size="sm" className="flex-1" asChild>
+                              <Link to={`/dashboard/assignments/${assignment.id}`}>
+                                <Eye className="h-4 w-4 mr-1" />
+                                Xem chi tiết
+                              </Link>
                             </Button>
                             <Button size="sm" className="flex-1">
                               Nộp bài
@@ -525,9 +437,9 @@ const CourseDetail = () => {
                     ))}
                   </div>
 
-                  {filteredAssignments.filter(a => a.status === 'active').length === 0 && (
+                  {filteredAssignments.filter(a => a.assignment_status === 'published').length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      Không có bài tập nào được giao
+                      {searchAssignments ? 'Không tìm thấy bài tập nào' : 'Không có bài tập nào được giao'}
                     </div>
                   )}
                 </CardContent>
@@ -537,7 +449,7 @@ const CourseDetail = () => {
             <TabsContent value="documents" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Tài liệu học tập</CardTitle>
+                  <CardTitle>Tài liệu học tập ({courseDocuments.length})</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Search */}
@@ -550,7 +462,7 @@ const CourseDetail = () => {
 
                   {/* Documents Grid for Students */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredDocuments.map((document: Document) => (
+                    {filteredDocuments.map((document) => (
                       <Card key={document.id} className="hover:shadow-lg transition-shadow">
                         <CardHeader>
                           <div className="flex items-start justify-between">
@@ -558,7 +470,7 @@ const CourseDetail = () => {
                               {getFileIcon(document.file_type || '')}
                               <CardTitle className="text-lg">{document.title}</CardTitle>
                             </div>
-                            <Badge variant="outline">{document.file_type}</Badge>
+                            <Badge variant="outline">{document.file_type || 'unknown'}</Badge>
                           </div>
                         </CardHeader>
                         <CardContent>
@@ -592,7 +504,7 @@ const CourseDetail = () => {
 
                   {filteredDocuments.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      Không có tài liệu nào
+                      {searchDocuments ? 'Không tìm thấy tài liệu nào' : 'Không có tài liệu nào'}
                     </div>
                   )}
                 </CardContent>
