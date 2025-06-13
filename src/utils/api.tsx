@@ -5,9 +5,9 @@ const BASE_URL = import.meta.env.VITE_API || 'http://127.0.0.1:8080/vms/api/v0';
 // Tạo instance axios với config mặc định
 const api = axios.create({
     baseURL: BASE_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    // headers: {
+    //     'Content-Type': 'application/json',
+    // },
 });
 
 export const METHODS = {

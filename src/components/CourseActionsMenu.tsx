@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MoreVertical, Edit, Trash2 } from 'lucide-react';
 import {
@@ -19,25 +18,29 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import EditCourseDialog from './EditCourseDialog';
+import { CourseBasicInfo } from '@/types/course';
+import { deleteApi } from '@/utils/api';
+import { COURSES_API } from './api-url';
 
 interface CourseActionsMenuProps {
-  course: {
-    id: number;
-    title: string;
-    description: string;
-    duration: string;
-    students: number;
-  };
+  course: CourseBasicInfo;
+  onSuccess: () => void;
 }
 
-const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course }) => {
+const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course, onSuccess }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleDelete = () => {
-    console.log('Xóa khóa học:', course.id);
-    // Logic xóa khóa học
-    setShowDeleteDialog(false);
+    deleteApi(`${COURSES_API.DELETE(course.id)}`).then((res) => {
+      onSuccess()
+    })
+    .catch((err) => {
+      console.log('err', err);
+    })
+    .finally(() => {
+      setShowDeleteDialog(false);
+    });
   };
 
   return (
@@ -67,6 +70,7 @@ const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course }) => {
         course={course}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
+        onSuccess={onSuccess}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

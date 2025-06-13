@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Users, BookOpen, Clock, Star } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,125 +9,73 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import CreateCourseDialog from '@/components/CreateCourseDialog';
 import CourseActionsMenu from '@/components/CourseActionsMenu';
-
-interface TeacherCourse {
-  id: number;
-  title: string;
-  description: string;
-  students: number;
-  lessons: number;
-  progress: number;
-  status: string;
-  thumbnail: string;
-  duration: string;
-}
-
-interface StudentCourse {
-  id: number;
-  title: string;
-  description: string;
-  instructor: string;
-  progress: number;
-  lessons: number;
-  completedLessons: number;
-  status: string;
-  thumbnail: string;
-  rating: number;
-  nextLesson: string | null;
-}
+import { getApi } from '@/utils/api';
+import { COURSES_API, FILES_API } from '@/components/api-url';
+import { Course, StudentCourse, TeacherCourse } from '@/types/course';
 
 const Courses = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [row, setRow] = useState<Course[]>([]);
 
-  const teacherCourses: TeacherCourse[] = [
-    {
-      id: 1,
-      title: 'Lập trình Web cơ bản',
-      description: 'Học HTML, CSS, JavaScript từ cơ bản đến nâng cao',
-      students: 30,
-      lessons: 24,
-      progress: 75,
-      status: 'active',
-      thumbnail: '/placeholder.svg',
-      duration: '12 tuần'
-    },
-    {
-      id: 2,
-      title: 'React Nâng cao',
-      description: 'Xây dựng ứng dụng web với React và các thư viện liên quan',
-      students: 25,
-      lessons: 18,
-      progress: 60,
-      status: 'active',
-      thumbnail: '/placeholder.svg',
-      duration: '10 tuần'
-    },
-    {
-      id: 3,
-      title: 'Node.js Backend',
-      description: 'Phát triển backend API với Node.js và Express',
-      students: 20,
-      lessons: 20,
-      progress: 90,
-      status: 'completed',
-      thumbnail: '/placeholder.svg',
-      duration: '8 tuần'
-    },
-    {
-      id: 4,
-      title: 'Database Design',
-      description: 'Thiết kế cơ sở dữ liệu hiệu quả',
-      students: 0,
-      lessons: 15,
-      progress: 0,
-      status: 'draft',
-      thumbnail: '/placeholder.svg',
-      duration: '6 tuần'
-    }
-  ];
+  const teacherCourses: TeacherCourse[] = row.map(course => ({
+    ...course,
+    id: course.id,
+    students: 0,
+    lessons: 0,
+    progress: 0,
+    status: 'draft',
+    thumbnail: course.thumbnail || '/placeholder.svg',
+    duration: course.duration || ''
+  }));
+  const studentCourses: StudentCourse[] = row.map(course => ({
+    ...course,
+    id: course.id,
+    instructor: course.instructor_id || '',
+    progress: 0,
+    lessons: 0,
+    completedLessons: 0,
+    status: 'enrolled',
+    thumbnail: course.thumbnail || '/placeholder.svg',
+    rating: 0,
+    nextLesson: null
+  }));
 
-  const studentCourses: StudentCourse[] = [
-    {
-      id: 1,
-      title: 'Lập trình Web cơ bản',
-      description: 'Học HTML, CSS, JavaScript từ cơ bản đến nâng cao',
-      instructor: 'ThS. Nguyễn Văn A',
-      progress: 85,
-      lessons: 24,
-      completedLessons: 20,
-      status: 'enrolled',
-      thumbnail: '/placeholder.svg',
-      rating: 4.8,
-      nextLesson: 'Bài 21: Responsive Design'
-    },
-    {
-      id: 2,
-      title: 'React Nâng cao',
-      description: 'Xây dựng ứng dụng web với React và các thư viện liên quan',
-      instructor: 'TS. Trần Thị B',
-      progress: 45,
-      lessons: 18,
-      completedLessons: 8,
-      status: 'enrolled',
-      thumbnail: '/placeholder.svg',
-      rating: 4.9,
-      nextLesson: 'Bài 9: React Router'
-    },
-    {
-      id: 3,
-      title: 'Node.js Backend',
-      description: 'Phát triển backend API với Node.js và Express',
-      instructor: 'ThS. Lê Văn C',
-      progress: 100,
-      lessons: 20,
-      completedLessons: 20,
-      status: 'completed',
-      thumbnail: '/placeholder.svg',
-      rating: 4.7,
-      nextLesson: null
+  useEffect(() => {
+    getCourses();
+  }, []);
+
+  const getCourses = async () => {
+  try {
+    const res = await getApi(`${COURSES_API.GET_ALL}`);
+    console.log('res', res);
+
+    if (!res?.data) return;
+
+    const coursesWithThumbnails = await Promise.all(
+      res.data.map(async (course) => {
+        const thumbnail = await getCourseThumbnail(course.thumbnail || '');
+        return { ...course, thumbnail };
+      })
+    );
+
+    setRow(coursesWithThumbnails);
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    setRow([]);
+  }
+};
+
+  const getCourseThumbnail = async (thumbnail: string) => {
+    if (!thumbnail) return '/placeholder.svg';
+    try {
+      const res = await getApi(`${FILES_API.GET_FILE(thumbnail)}`);
+      return res?.data?.url || '/placeholder.svg';
+    } catch (error) {
+      console.error('Error fetching thumbnail:', error);
+      return '/placeholder.svg';
     }
-  ];
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -167,7 +114,7 @@ const Courses = () => {
               }
             </p>
           </div>
-          {user?.role === 'teacher' && <CreateCourseDialog />}
+          {user?.role === 'teacher' && <CreateCourseDialog onSuccess={getCourses} />}
         </div>
 
         {/* Search */}
@@ -198,7 +145,7 @@ const Courses = () => {
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(course.status)}
                     {user?.role === 'teacher' && (
-                      <CourseActionsMenu course={course as TeacherCourse} />
+                      <CourseActionsMenu course={course as TeacherCourse} onSuccess={getCourses} />
                     )}
                   </div>
                 </div>

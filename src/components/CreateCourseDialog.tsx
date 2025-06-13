@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Upload, X } from 'lucide-react';
 import {
   Dialog,
@@ -14,35 +13,69 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { postApi } from '@/utils/api';
+import { COURSES_API, FILES_API } from './api-url';
+import { CourseRequest } from '@/types/course';
+import { toast } from 'sonner';
+import { getUser } from '@/utils/getUser';
 
-const CreateCourseDialog = () => {
+interface CreateCourseDialogProps {
+  onSuccess: () => void;
+}
+
+const CreateCourseDialog = ({ onSuccess }: CreateCourseDialogProps) => {
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const user = getUser();
+  const [formData, setFormData] = useState<CourseRequest>({
     title: '',
     description: '',
     duration: '',
-    maxStudents: '',
-    thumbnail: null as File | null
+    maxStudents: 0,
+    thumbnail: '',
+    instructor_id: user?.id || ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Tạo khóa học mới:', formData);
-    // Logic tạo khóa học
-    setOpen(false);
-    setFormData({
-      title: '',
-      description: '',
-      duration: '',
-      maxStudents: '',
-      thumbnail: null
-    });
-  };
+  const createCourse = async (data: CourseRequest): Promise<boolean> => {
+    try {
+      const res = await postApi(`${COURSES_API.CREATE}`, data);
+      console.log('res', res);
+      return true;
+    } catch (error) {
+      console.error('Error creating course:', error);
+      return false;
+    }
+  }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const success = await createCourse(formData);
+    if (success) {
+      toast.success('Tạo khóa học thành công');
+      onSuccess();
+    } else {
+      toast.error('Tạo khóa học thất bại');
+    }
+    setOpen(false);
+  }
+  
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setFormData({ ...formData, thumbnail: file });
+    if (!file) return;
+
+    try {
+      if (!user?.id) throw new Error('User ID not found');
+
+      const uploadData = new FormData();
+      uploadData.append('file', file, file.name);
+      
+      const res = await postApi(`${FILES_API.UPLOAD(user.id)}`, uploadData);
+      if (res?.data?.file_name) {
+        setFormData({ ...formData, thumbnail: res?.data.file_name });
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    } finally {
     }
   };
 
@@ -93,20 +126,20 @@ const CreateCourseDialog = () => {
                 <Input
                   id="duration"
                   value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value})}
                   placeholder="VD: 12 tuần"
                 />
               </div>
-              <div>
+              {/* <div>
                 <Label htmlFor="maxStudents">Số học sinh tối đa</Label>
                 <Input
                   id="maxStudents"
                   type="number"
                   value={formData.maxStudents}
-                  onChange={(e) => setFormData({ ...formData, maxStudents: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, maxStudents: parseInt(e.target.value) || 0 })}
                   placeholder="VD: 30"
                 />
-              </div>
+              </div> */}
             </div>
 
             <div>
@@ -122,12 +155,12 @@ const CreateCourseDialog = () => {
                       <p className="text-sm text-gray-500">PNG, JPG lên đến 5MB</p>
                       {formData.thumbnail && (
                         <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
-                          <span>{formData.thumbnail.name}</span>
+                          <span>{formData.thumbnail}</span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => setFormData({ ...formData, thumbnail: null })}
+                            onClick={() => setFormData({ ...formData, thumbnail: '' })}
                           >
                             <X className="h-4 w-4" />
                           </Button>

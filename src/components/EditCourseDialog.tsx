@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Edit, Upload, X } from 'lucide-react';
 import {
   Dialog,
@@ -13,39 +12,77 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { COURSES_API, FILES_API } from './api-url';
+import { getApi, postApi, putApi } from '@/utils/api';
+import {  CourseBasicInfo } from '@/types/course';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EditCourseDialogProps {
-  course: {
-    id: number;
-    title: string;
-    description: string;
-    duration: string;
-    students: number;
-  };
+  course: CourseBasicInfo;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
-
-const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpenChange }) => {
+const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpenChange, onSuccess }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: course.title,
     description: course.description,
+    instructor_id: course.instructor_id,
     duration: course.duration,
-    maxStudents: course.students.toString(),
-    thumbnail: null as File | null
+    thumbnail: null
   });
+
+  useEffect(() => {
+    if (!open || !course.id) return; // chỉ gọi API khi dialog mở và có id hợp lệ
+  
+    const fetchCourse = async () => {
+      try {
+        const res = await getApi(`${COURSES_API.GET_BY_ID(course.id)}`);
+        setFormData({
+          ...formData,
+          thumbnail: res.data.thumbnail
+        });
+      } catch (error) {
+        console.error('Error fetching course by id:', error);
+      }
+    };
+  
+    fetchCourse();
+  }, [open, course.id]);  
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Cập nhật khóa học:', formData);
     // Logic cập nhật khóa học
-    onOpenChange(false);
+    putApi(`${COURSES_API.UPDATE(course.id)}`, formData).then((res) => {
+      onOpenChange(false)
+      onSuccess()
+    })
+    .catch((err) => {
+      console.log('err', err);
+    })
+    .finally(() => {
+      onOpenChange(false)
+    });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setFormData({ ...formData, thumbnail: file });
+    if (!file) return;
+
+    try {
+      if (!user?.id) throw new Error('User ID not found');
+
+      const uploadData = new FormData();
+      uploadData.append('file', file, file.name);
+      
+      const res = await postApi(`${FILES_API.UPLOAD(user.id)}`, uploadData);
+      if (res?.data?.file_name) {
+        setFormData({ ...formData, thumbnail: res?.data.file_name });
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    } finally {
     }
   };
 
@@ -94,7 +131,7 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
                   placeholder="VD: 12 tuần"
                 />
               </div>
-              <div>
+              {/* <div>
                 <Label htmlFor="edit-maxStudents">Số học sinh tối đa</Label>
                 <Input
                   id="edit-maxStudents"
@@ -103,7 +140,7 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
                   onChange={(e) => setFormData({ ...formData, maxStudents: e.target.value })}
                   placeholder="VD: 30"
                 />
-              </div>
+              </div> */}
             </div>
 
             <div>
@@ -119,7 +156,7 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
                       <p className="text-sm text-gray-500">PNG, JPG lên đến 5MB</p>
                       {formData.thumbnail && (
                         <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
-                          <span>{formData.thumbnail.name}</span>
+                          <span>{formData.thumbnail}</span>
                           <Button
                             type="button"
                             variant="ghost"
