@@ -18,6 +18,7 @@ import Students from "./pages/Students";
 import Grades from "./pages/Grades";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
+import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -129,6 +130,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/messages" 
+              element={
+                <ProtectedRoute>
+                  <Messages />
                 </ProtectedRoute>
               } 
             />

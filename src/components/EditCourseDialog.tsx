@@ -91,6 +91,8 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
         description: "Đã cập nhật khóa học thành công",
       });
       onOpenChange(false);
+      
+      // The query will be automatically refetched due to invalidateQueries in the mutation
     } catch (error) {
       console.error('Error updating course:', error);
       toast({

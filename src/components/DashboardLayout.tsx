@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -14,11 +15,15 @@ import {
   LogOut,
   User,
   GraduationCap,
-  ClipboardList
+  ClipboardList,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
+import NotificationDropdown from '@/components/NotificationDropdown';
+import MessagesDropdown from '@/components/MessagesDropdown';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -29,6 +34,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: unreadCounts } = useUnreadCounts();
 
   const teacherMenuItems = [
     { icon: Home, label: 'Trang chủ', path: '/dashboard' },
@@ -36,6 +42,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: FileText, label: 'Quản lý tài liệu', path: '/dashboard/documents' },
     { icon: ClipboardList, label: 'Quản lý bài tập', path: '/dashboard/assignments' },
     { icon: Users, label: 'Quản lý học sinh', path: '/dashboard/students' },
+    { icon: MessageCircle, label: 'Tin nhắn', path: '/dashboard/messages' },
     { icon: Award, label: 'Thống kê & báo cáo', path: '/dashboard/reports' },
     { icon: Bell, label: 'Thông báo', path: '/dashboard/notifications' },
     { icon: Settings, label: 'Cài đặt', path: '/dashboard/settings' },
@@ -45,6 +52,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: Home, label: 'Trang chủ', path: '/dashboard' },
     { icon: BookOpen, label: 'Khóa học của tôi', path: '/dashboard/my-courses' },
     { icon: ClipboardList, label: 'Bài tập', path: '/dashboard/assignments' },
+    { icon: MessageCircle, label: 'Tin nhắn', path: '/dashboard/messages' },
     { icon: Award, label: 'Điểm số', path: '/dashboard/grades' },
     { icon: Bell, label: 'Thông báo', path: '/dashboard/notifications' },
     { icon: User, label: 'Hồ sơ cá nhân', path: '/dashboard/profile' },
@@ -88,9 +96,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="h-5 w-5" />
-              </Button>
+              <NotificationDropdown unreadCount={unreadCounts?.notifications || 0} />
+              <MessagesDropdown unreadCount={unreadCounts?.messages || 0} />
               <div className="flex items-center space-x-3">
                 <Avatar>
                   <AvatarImage src={profile?.avatar_url} alt={profile?.full_name} />

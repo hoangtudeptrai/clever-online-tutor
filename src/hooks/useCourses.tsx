@@ -29,69 +29,83 @@ export const useCourses = () => {
     queryFn: async () => {
       if (!profile) return [];
 
-      if (profile.role === 'tutor') {
-        // Lấy khóa học của giáo viên
-        const { data: coursesData, error } = await supabase
-          .from('courses')
-          .select('*')
-          .eq('instructor_id', profile.id)
-          // Sắp xếp: active trước, sau đó là draft và archived
-          // Trong cùng trạng thái thì sắp xếp theo thời gian tạo mới nhất
-          .order('status', { ascending: true }) // 'active' sẽ lên đầu vì theo thứ tự alphabet
-          .order('created_at', { ascending: false });
+      try {
+        if (profile.role === 'tutor') {
+          // Lấy khóa học của giáo viên
+          const { data: coursesData, error } = await supabase
+            .from('courses')
+            .select('*')
+            .eq('instructor_id', profile.id)
+            .order('status', { ascending: true })
+            .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching tutor courses:', error);
-          throw error;
-        }
+          if (error) {
+            console.error('Error fetching tutor courses:', error);
+            throw error;
+          }
 
-        // Lấy thông tin instructor cho mỗi khóa học
-        const coursesWithInstructor = await Promise.all((coursesData || []).map(async (course) => {
-          const { data: instructorData } = await supabase
+          if (!coursesData || coursesData.length === 0) {
+            return [];
+          }
+
+          // Lấy thông tin instructor cho mỗi khóa học
+          const instructorIds = [...new Set(coursesData.map(course => course.instructor_id))];
+          const { data: instructorsData } = await supabase
             .from('profiles')
             .select('id, full_name, email')
-            .eq('id', course.instructor_id)
-            .single();
+            .in('id', instructorIds);
 
-          return {
+          const instructorsMap = new Map((instructorsData || []).map(i => [i.id, i]));
+
+          const coursesWithInstructor = coursesData.map(course => ({
             ...course,
-            instructor: instructorData
-          };
-        }));
+            instructor: instructorsMap.get(course.instructor_id) || null
+          }));
 
-        return coursesWithInstructor as Course[];
-      } else {
-        // Lấy khóa học cho học sinh (chỉ những khóa active)
-        const { data: coursesData, error } = await supabase
-          .from('courses')
-          .select('*')
-          .eq('status', 'active')
-          // Sắp xếp theo thời gian tạo mới nhất
-          .order('created_at', { ascending: false });
+          return coursesWithInstructor as Course[];
+        } else {
+          // Lấy khóa học cho học sinh (chỉ những khóa active)
+          const { data: coursesData, error } = await supabase
+            .from('courses')
+            .select('*')
+            .eq('status', 'active')
+            .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching student courses:', error);
-          throw error;
-        }
+          if (error) {
+            console.error('Error fetching student courses:', error);
+            throw error;
+          }
 
-        // Lấy thông tin instructor cho mỗi khóa học
-        const coursesWithInstructor = await Promise.all((coursesData || []).map(async (course) => {
-          const { data: instructorData } = await supabase
+          if (!coursesData || coursesData.length === 0) {
+            return [];
+          }
+
+          // Lấy thông tin instructor cho mỗi khóa học
+          const instructorIds = [...new Set(coursesData.map(course => course.instructor_id))];
+          const { data: instructorsData } =  await supabase
             .from('profiles')
             .select('id, full_name, email')
-            .eq('id', course.instructor_id)
-            .single();
+            .in('id', instructorIds);
 
-          return {
+          const instructorsMap = new Map((instructorsData || []).map(i => [i.id, i]));
+
+          const coursesWithInstructor = coursesData.map(course => ({
             ...course,
-            instructor: instructorData
-          };
-        }));
+            instructor: instructorsMap.get(course.instructor_id) || null
+          }));
 
-        return coursesWithInstructor as Course[];
+          return coursesWithInstructor as Course[];
+        }
+      } catch (error) {
+        console.error('Error in useCourses:', error);
+        throw error;
       }
     },
     enabled: !!profile,
+    staleTime: 0, // Consider data stale immediately
+    gcTime: 0, // Don't cache data
+    refetchOnMount: true, // Always refetch on mount
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 };
 
@@ -106,11 +120,15 @@ export const useCreateCourse = () => {
       thumbnail?: string;
       duration?: string;
     }) => {
+      if (!profile?.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase
         .from('courses')
         .insert({
           ...courseData,
-          instructor_id: profile?.id,
+          instructor_id: profile.id,
           status: 'active',
         })
         .select()
@@ -119,9 +137,18 @@ export const useCreateCourse = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    onSuccess: async (newCourse) => {
+      try {
+        // Invalidate and refetch courses query
+        await queryClient.invalidateQueries({ queryKey: ['courses'] });
+        await queryClient.refetchQueries({ queryKey: ['courses'] });
+        
+        // Invalidate and refetch stats query
+        await queryClient.invalidateQueries({ queryKey: ['stats'] });
+        await queryClient.refetchQueries({ queryKey: ['stats'] });
+      } catch (error) {
+        console.error('Error updating cache after course creation:', error);
+      }
     },
   });
 };
@@ -160,10 +187,12 @@ export const useUpdateCourse = () => {
       return data;
     },
     onSuccess: (_, variables) => {
-      // Invalidate both the specific course and the courses list
+      // Invalidate all course-related queries
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       queryClient.invalidateQueries({ queryKey: ['course', variables.courseId] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
+      // Force refetch
+      queryClient.refetchQueries({ queryKey: ['courses'] });
     },
   });
 };
@@ -192,8 +221,11 @@ export const useDeleteCourse = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate all course-related queries
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
+      // Force refetch
+      queryClient.refetchQueries({ queryKey: ['courses'] });
     },
   });
 };

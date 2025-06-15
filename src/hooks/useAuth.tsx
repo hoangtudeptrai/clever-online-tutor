@@ -1,7 +1,7 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
   id: string;
@@ -26,6 +26,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
+  uploadAvatar: (file: File) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +36,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -149,9 +151,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (!error) {
       setProfile(prev => prev ? { ...prev, ...updates } : null);
+      toast({
+        title: "Thành công",
+        description: "Hồ sơ đã được cập nhật",
+      });
+    } else {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật hồ sơ",
+        variant: "destructive",
+      });
     }
 
     return { error };
+  };
+
+  const uploadAvatar = async (file: File) => {
+    if (!user) return { error: 'No user logged in' };
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('message-files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('message-files')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
+      
+      return { error: updateError };
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      return { error };
+    }
   };
 
   const value = {
@@ -163,6 +202,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     updateProfile,
+    uploadAvatar,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

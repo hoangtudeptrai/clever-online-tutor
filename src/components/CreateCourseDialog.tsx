@@ -67,6 +67,7 @@ const CreateCourseDialog = () => {
         description: "Đã tạo khóa học mới thành công",
       });
 
+      // Reset form and close dialog
       setOpen(false);
       setFormData({
         title: '',
@@ -75,6 +76,8 @@ const CreateCourseDialog = () => {
         thumbnail: null
       });
       setThumbnailPreview(null);
+      
+      // The query will be automatically refetched due to invalidateQueries in the mutation
     } catch (error) {
       console.error('Error creating course:', error);
       toast({

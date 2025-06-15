@@ -41,43 +41,62 @@ export const useAssignments = () => {
   return useQuery({
     queryKey: ['assignments', profile?.id],
     queryFn: async () => {
-      // Fetch assignments first
-      let query = supabase
-        .from('assignments')
-        .select('*');
+      if (!profile) return [];
 
-      if (profile?.role === 'student') {
-        query = query.eq('assignment_status', 'published');
+      try {
+        // Fetch assignments first
+        let query = supabase
+          .from('assignments')
+          .select('*');
+
+        if (profile.role === 'student') {
+          query = query.eq('assignment_status', 'published');
+        }
+
+        const { data: assignments, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching assignments:', error);
+          throw error;
+        }
+
+        if (!assignments || assignments.length === 0) {
+          return [];
+        }
+
+        // Fetch related data in parallel
+        const courseIds = [...new Set(assignments.map(a => a.course_id))];
+        const creatorIds = [...new Set(assignments.map(a => a.created_by))];
+
+        const [coursesResult, creatorsResult] = await Promise.allSettled([
+          supabase
+            .from('courses')
+            .select('id, title, instructor_id')
+            .in('id', courseIds),
+          supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', creatorIds)
+        ]);
+
+        // Handle results safely
+        const coursesData = coursesResult.status === 'fulfilled' ? coursesResult.value.data || [] : [];
+        const creatorsData = creatorsResult.status === 'fulfilled' ? creatorsResult.value.data || [] : [];
+
+        // Create lookup maps
+        const coursesMap = new Map(coursesData.map(c => [c.id, c]));
+        const creatorsMap = new Map(creatorsData.map(c => [c.id, c]));
+        
+        // Transform the data to match our Assignment interface
+        return assignments.map((item: any) => ({
+          ...item,
+          course: coursesMap.get(item.course_id) || null,
+          creator: creatorsMap.get(item.created_by) || null
+        })) as Assignment[];
+      } catch (error) {
+        console.error('Error in useAssignments:', error);
+        throw error;
       }
-
-      const { data: assignments, error } = await query.order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch related data in parallel
-      const [coursesData, creatorsData] = await Promise.all([
-        // Get courses
-        supabase
-          .from('courses')
-          .select('id, title, instructor_id')
-          .in('id', assignments.map(a => a.course_id)),
-        // Get creators
-        supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', assignments.map(a => a.created_by))
-      ]);
-
-      // Create lookup maps
-      const coursesMap = new Map(coursesData.data?.map(c => [c.id, c]));
-      const creatorsMap = new Map(creatorsData.data?.map(c => [c.id, c]));
-      
-      // Transform the data to match our Assignment interface
-      return assignments.map((item: any) => ({
-        ...item,
-        course: coursesMap.get(item.course_id),
-        creator: creatorsMap.get(item.created_by)
-      })) as Assignment[];
     },
     enabled: !!profile,
   });
@@ -89,61 +108,78 @@ export const useAssignmentWithSubmissions = (assignmentId: string) => {
   return useQuery({
     queryKey: ['assignment', assignmentId],
     queryFn: async () => {
-      // Fetch assignment first
-      const { data: assignment, error } = await supabase
-        .from('assignments')
-        .select('*')
-        .eq('id', assignmentId)
-        .single();
+      if (!assignmentId) return null;
 
-      if (error) throw error;
+      try {
+        // Fetch assignment first
+        const { data: assignment, error } = await supabase
+          .from('assignments')
+          .select('*')
+          .eq('id', assignmentId)
+          .single();
 
-      // Fetch related data in parallel
-      const [courseData, creatorData, submissionsData] = await Promise.all([
-        // Get course
-        supabase
-          .from('courses')
-          .select('id, title, instructor_id')
-          .eq('id', assignment.course_id)
-          .single(),
-        // Get creator
-        supabase
-          .from('profiles')
-          .select('id, full_name')
-          .eq('id', assignment.created_by)
-          .single(),
-        // Get submissions with students
-        supabase
-          .from('assignment_submissions')
-          .select('id, status, submitted_at, grade, feedback, student_id')
-          .eq('assignment_id', assignmentId)
-      ]);
+        if (error) {
+          console.error('Error fetching assignment:', error);
+          throw error;
+        }
 
-      // If we have submissions, fetch student profiles
-      let studentsData = { data: [] };
-      if (submissionsData.data?.length > 0) {
-        studentsData = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', submissionsData.data.map(s => s.student_id));
+        if (!assignment) return null;
+
+        // Fetch related data in parallel
+        const [courseResult, creatorResult, submissionsResult] = await Promise.allSettled([
+          supabase
+            .from('courses')
+            .select('id, title, instructor_id')
+            .eq('id', assignment.course_id)
+            .single(),
+          supabase
+            .from('profiles')
+            .select('id, full_name')
+            .eq('id', assignment.created_by)
+            .single(),
+          supabase
+            .from('assignment_submissions')
+            .select('id, status, submitted_at, grade, feedback, content, student_id')
+            .eq('assignment_id', assignmentId)
+        ]);
+
+        // Handle results safely
+        const courseData = courseResult.status === 'fulfilled' ? courseResult.value.data : null;
+        const creatorData = creatorResult.status === 'fulfilled' ? creatorResult.value.data : null;
+        const submissionsData = submissionsResult.status === 'fulfilled' ? submissionsResult.value.data || [] : [];
+
+        // If we have submissions, fetch student profiles
+        let studentsData: any[] = [];
+        if (submissionsData.length > 0) {
+          const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
+          const studentsResult = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', studentIds);
+          
+          studentsData = studentsResult.data || [];
+        }
+
+        // Create a map of student profiles
+        const studentsMap = new Map(studentsData.map(s => [s.id, s]));
+
+        // Transform submissions data
+        const transformedSubmissions = submissionsData.map(submission => ({
+          ...submission,
+          student: studentsMap.get(submission.student_id) || { full_name: 'Unknown' }
+        }));
+        
+        // Return transformed data
+        return {
+          ...assignment,
+          course: courseData,
+          creator: creatorData,
+          submissions: transformedSubmissions
+        } as Assignment;
+      } catch (error) {
+        console.error('Error in useAssignmentWithSubmissions:', error);
+        throw error;
       }
-
-      // Create a map of student profiles
-      const studentsMap = new Map(studentsData.data?.map(s => [s.id, s]));
-
-      // Transform submissions data
-      const transformedSubmissions = submissionsData.data?.map(submission => ({
-        ...submission,
-        student: studentsMap.get(submission.student_id)
-      }));
-      
-      // Return transformed data
-      return {
-        ...assignment,
-        course: courseData.data,
-        creator: creatorData.data,
-        submissions: transformedSubmissions
-      } as Assignment;
     },
     enabled: !!assignmentId && !!profile,
   });
@@ -162,11 +198,15 @@ export const useCreateAssignment = () => {
       due_date?: string;
       max_score?: number;
     }) => {
+      if (!profile?.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase
         .from('assignments')
         .insert({
           ...assignmentData,
-          created_by: profile?.id,
+          created_by: profile.id,
           assignment_status: 'published'
         })
         .select()

@@ -3,86 +3,69 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export interface FileUploadResult {
-  url: string;
-  path: string;
-}
-
 export const useFileUpload = () => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
-  const uploadFile = async (
-    file: File,
-    bucket: string,
-    path?: string
-  ): Promise<FileUploadResult | null> => {
+  const uploadFile = async (file: File, bucket: string, folder?: string) => {
+    setUploading(true);
     try {
-      setUploading(true);
-
       const fileExt = file.name.split('.').pop();
-      const fileName = path || `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = folder ? `${folder}/${fileName}` : fileName;
 
       const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        .upload(filePath, file);
 
-      if (error) {
-        console.error('Upload error:', error);
-        toast({
-          title: "Lỗi upload",
-          description: error.message,
-          variant: "destructive",
-        });
-        return null;
-      }
+      if (error) throw error;
 
-      const { data: urlData } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from(bucket)
-        .getPublicUrl(data.path);
+        .getPublicUrl(filePath);
 
       return {
-        url: urlData.publicUrl,
-        path: data.path
+        path: data.path,
+        url: publicUrl,
+        name: file.name,
+        type: file.type,
+        size: file.size
       };
-
     } catch (error) {
       console.error('Upload error:', error);
       toast({
-        title: "Lỗi upload",
+        title: "Lỗi",
         description: "Không thể tải file lên",
         variant: "destructive",
       });
-      return null;
+      throw error;
     } finally {
       setUploading(false);
     }
   };
 
-  const deleteFile = async (bucket: string, path: string): Promise<boolean> => {
+  const deleteFile = async (bucket: string, path: string) => {
     try {
       const { error } = await supabase.storage
         .from(bucket)
         .remove([path]);
 
-      if (error) {
-        console.error('Delete error:', error);
-        return false;
-      }
+      if (error) throw error;
 
-      return true;
+      toast({
+        title: "Thành công",
+        description: "File đã được xóa",
+      });
     } catch (error) {
       console.error('Delete error:', error);
-      return false;
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa file",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
-  return {
-    uploadFile,
-    deleteFile,
-    uploading
-  };
+  return { uploadFile, deleteFile, uploading };
 };

@@ -37,6 +37,8 @@ import { Label } from '@/components/ui/label';
 import DashboardLayout from '@/components/DashboardLayout';
 import EditAssignmentDialog from '@/components/EditAssignmentDialog';
 import StudentSubmissionDialog from '@/components/StudentSubmissionDialog';
+import AssignmentFilesList from '@/components/AssignmentFilesList';
+import SubmissionDetailDialog from '@/components/SubmissionDetailDialog';
 import { useAssignmentWithSubmissions } from '@/hooks/useAssignments';
 import { useDeleteAssignment } from '@/hooks/useDeleteAssignment';
 import { useGradeSubmission } from '@/hooks/useSubmissions';
@@ -53,8 +55,10 @@ const AssignmentDetail = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSubmissionDialog, setShowSubmissionDialog] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [showSubmissionDetail, setShowSubmissionDetail] = useState(false);
 
-  const { data: assignment, isLoading } = useAssignmentWithSubmissions(assignmentId || '');
+  const { data: assignment, isLoading, refetch } = useAssignmentWithSubmissions(assignmentId || '');
   const deleteAssignmentMutation = useDeleteAssignment();
   const gradeSubmissionMutation = useGradeSubmission();
 
@@ -130,6 +134,15 @@ const AssignmentDetail = () => {
       submissionId,
       grade: Number(data.grade),
       feedback: data.feedback
+    }, {
+      onSuccess: () => {
+        refetch();
+        setGradingData(prev => {
+          const newData = { ...prev };
+          delete newData[submissionId];
+          return newData;
+        });
+      }
     });
   };
 
@@ -147,8 +160,24 @@ const AssignmentDetail = () => {
     deleteAssignmentMutation.mutate(assignmentId!, {
       onSuccess: () => {
         navigate('/dashboard/assignments');
+        window.location.reload();
       }
     });
+  };
+
+  const handleEditSuccess = () => {
+    refetch();
+    setShowEditDialog(false);
+  };
+
+  const handleSubmissionSuccess = () => {
+    refetch();
+    setShowSubmissionDialog(false);
+  };
+
+  const handleViewSubmission = (submission: any) => {
+    setSelectedSubmission(submission);
+    setShowSubmissionDetail(true);
   };
 
   const filteredSubmissions = submissions.filter(submission =>
@@ -244,190 +273,206 @@ const AssignmentDetail = () => {
           </Card>
         </div>
 
-        {/* Assignment Details */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Chi tiết bài tập</CardTitle>
-              {getStatusBadge(assignment.assignment_status || 'draft')}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Khóa học</Label>
-                <p className="text-lg">{assignment.course?.title}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Người tạo</Label>
-                <p className="text-lg">{assignment.creator?.full_name}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Ngày tạo</Label>
-                <p className="text-lg">{formatDate(assignment.created_at)}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Lần cập nhật cuối</Label>
-                <p className="text-lg">{formatDate(assignment.updated_at)}</p>
-              </div>
-            </div>
+        {/* Assignment Details with Tabs */}
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details">Chi tiết bài tập</TabsTrigger>
+            <TabsTrigger value="files">File đính kèm</TabsTrigger>
+            {profile?.role === 'tutor' && <TabsTrigger value="submissions">Bài nộp ({submissions.length})</TabsTrigger>}
+          </TabsList>
 
-            {/* Student's submission status */}
-            {profile?.role === 'student' && (
-              <div className="pt-4 border-t">
-                <Label className="text-sm font-medium text-gray-600">Trạng thái nộp bài</Label>
-                {userSubmission ? (
-                  <div className="mt-2 space-y-2">
-                    {getStatusBadge(userSubmission.grade !== null ? 'graded' : 'submitted')}
-                    <p className="text-sm text-gray-600">
-                      Nộp lúc: {userSubmission.submitted_at ? formatDate(userSubmission.submitted_at) : 'N/A'}
-                    </p>
-                    {userSubmission.grade !== null && (
-                      <p className="text-sm font-medium text-green-600">
-                        Điểm: {userSubmission.grade}/{assignment.max_score || 100}
-                      </p>
-                    )}
-                    {userSubmission.feedback && (
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">Nhận xét:</Label>
-                        <p className="text-sm mt-1">{userSubmission.feedback}</p>
+          <TabsContent value="details" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Thông tin bài tập</CardTitle>
+                  {getStatusBadge(assignment.assignment_status || 'draft')}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Khóa học</Label>
+                    <p className="text-lg">{assignment.course?.title}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Người tạo</Label>
+                    <p className="text-lg">{assignment.creator?.full_name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Ngày tạo</Label>
+                    <p className="text-lg">{formatDate(assignment.created_at)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Lần cập nhật cuối</Label>
+                    <p className="text-lg">{formatDate(assignment.updated_at)}</p>
+                  </div>
+                </div>
+
+                {/* Student's submission status */}
+                {profile?.role === 'student' && (
+                  <div className="pt-4 border-t">
+                    <Label className="text-sm font-medium text-gray-600">Trạng thái nộp bài</Label>
+                    {userSubmission ? (
+                      <div className="mt-2 space-y-2">
+                        {getStatusBadge(userSubmission.grade !== null ? 'graded' : 'submitted')}
+                        <p className="text-sm text-gray-600">
+                          Nộp lúc: {userSubmission.submitted_at ? formatDate(userSubmission.submitted_at) : 'N/A'}
+                        </p>
+                        {userSubmission.grade !== null && (
+                          <p className="text-sm font-medium text-green-600">
+                            Điểm: {userSubmission.grade}/{assignment.max_score || 100}
+                          </p>
+                        )}
+                        {userSubmission.feedback && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Nhận xét:</Label>
+                            <p className="text-sm mt-1">{userSubmission.feedback}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2">
+                        {getStatusBadge('pending')}
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="mt-2">
-                    {getStatusBadge('pending')}
-                  </div>
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Submissions Management - Only for tutors */}
-        {profile?.role === 'tutor' && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Quản lý bài nộp ({submissions.length})</CardTitle>
-                <div className="flex space-x-2">
-                  <Input
-                    placeholder="Tìm kiếm học sinh..."
-                    value={searchSubmissions}
-                    onChange={(e) => setSearchSubmissions(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {filteredSubmissions.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Học sinh</TableHead>
-                      <TableHead>Ngày nộp</TableHead>
-                      <TableHead>Trạng thái</TableHead>
-                      <TableHead>Điểm</TableHead>
-                      <TableHead>Hành động</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSubmissions.map((submission) => (
-                      <TableRow key={submission.id}>
-                        <TableCell className="font-medium">
-                          {submission.student?.full_name}
-                        </TableCell>
-                        <TableCell>
-                          {submission.submitted_at ? formatDate(submission.submitted_at) : 'Chưa nộp'}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(submission.grade !== null ? 'graded' : submission.status)}
-                        </TableCell>
-                        <TableCell>
-                          {submission.grade !== null ? `${submission.grade}/${assignment.max_score || 100}` : 'Chưa chấm'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4 mr-1" />
-                              Xem
-                            </Button>
-                            {submission.status === 'submitted' && (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button size="sm">
-                                    {submission.grade !== null ? 'Chỉnh sửa điểm' : 'Chấm điểm'}
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle>Chấm điểm cho {submission.student?.full_name}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                      <Label htmlFor="grade">Điểm số</Label>
-                                      <Input
-                                        id="grade"
-                                        type="number"
-                                        min="0"
-                                        max={assignment.max_score || 100}
-                                        placeholder={`0 - ${assignment.max_score || 100}`}
-                                        value={gradingData[submission.id]?.grade || submission.grade || ''}
-                                        onChange={(e) => updateGradingData(submission.id, 'grade', e.target.value)}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="feedback">Nhận xét</Label>
-                                      <Textarea
-                                        id="feedback"
-                                        placeholder="Nhập nhận xét cho học sinh..."
-                                        value={gradingData[submission.id]?.feedback || submission.feedback || ''}
-                                        onChange={(e) => updateGradingData(submission.id, 'feedback', e.target.value)}
-                                        rows={4}
-                                      />
-                                    </div>
-                                    <Button 
-                                      onClick={() => handleGradeSubmission(submission.id)}
-                                      className="w-full"
-                                      disabled={gradeSubmissionMutation.isPending}
-                                    >
-                                      <Save className="h-4 w-4 mr-2" />
-                                      {gradeSubmissionMutation.isPending ? 'Đang lưu...' : 'Lưu điểm'}
-                                    </Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  {searchSubmissions ? 'Không tìm thấy học sinh nào' : 'Chưa có bài nộp nào'}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="files">
+            <AssignmentFilesList 
+              assignmentId={assignment.id} 
+              canDelete={profile?.role === 'tutor'}
+            />
+          </TabsContent>
+
+          {profile?.role === 'tutor' && (
+            <TabsContent value="submissions">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Quản lý bài nộp ({submissions.length})</CardTitle>
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="Tìm kiếm học sinh..."
+                        value={searchSubmissions}
+                        onChange={(e) => setSearchSubmissions(e.target.value)}
+                        className="max-w-sm"
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {filteredSubmissions.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Học sinh</TableHead>
+                          <TableHead>Ngày nộp</TableHead>
+                          <TableHead>Trạng thái</TableHead>
+                          <TableHead>Điểm</TableHead>
+                          <TableHead>Hành động</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSubmissions.map((submission) => (
+                          <TableRow key={submission.id}>
+                            <TableCell className="font-medium">
+                              {submission.student?.full_name}
+                            </TableCell>
+                            <TableCell>
+                              {submission.submitted_at ? formatDate(submission.submitted_at) : 'Chưa nộp'}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(submission.grade !== null ? 'graded' : submission.status)}
+                            </TableCell>
+                            <TableCell>
+                              {submission.grade !== null ? `${submission.grade}/${assignment.max_score || 100}` : 'Chưa chấm'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleViewSubmission(submission)}
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Xem
+                                </Button>
+                                {submission.status === 'submitted' && (
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button size="sm">
+                                        {submission.grade !== null ? 'Chỉnh sửa điểm' : 'Chấm điểm'}
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-md">
+                                      <DialogHeader>
+                                        <DialogTitle>Chấm điểm cho {submission.student?.full_name}</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                          <Label htmlFor="grade">Điểm số</Label>
+                                          <Input
+                                            id="grade"
+                                            type="number"
+                                            min="0"
+                                            max={assignment.max_score || 100}
+                                            placeholder={`0 - ${assignment.max_score || 100}`}
+                                            value={gradingData[submission.id]?.grade || submission.grade || ''}
+                                            onChange={(e) => updateGradingData(submission.id, 'grade', e.target.value)}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="feedback">Nhận xét</Label>
+                                          <Textarea
+                                            id="feedback"
+                                            placeholder="Nhập nhận xét cho học sinh..."
+                                            value={gradingData[submission.id]?.feedback || submission.feedback || ''}
+                                            onChange={(e) => updateGradingData(submission.id, 'feedback', e.target.value)}
+                                            rows={4}
+                                          />
+                                        </div>
+                                        <Button 
+                                          onClick={() => handleGradeSubmission(submission.id)}
+                                          className="w-full"
+                                          disabled={gradeSubmissionMutation.isPending}
+                                        >
+                                          <Save className="h-4 w-4 mr-2" />
+                                          {gradeSubmissionMutation.isPending ? 'Đang lưu...' : 'Lưu điểm'}
+                                        </Button>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      {searchSubmissions ? 'Không tìm thấy học sinh nào' : 'Chưa có bài nộp nào'}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
 
       {/* Edit Assignment Dialog */}
       {showEditDialog && (
         <EditAssignmentDialog
-          assignment={{
-            id: assignment.id,
-            title: assignment.title,
-            description: assignment.description || '',
-            course: assignment.course?.title || '',
-            dueDate: assignment.due_date || '',
-            maxScore: assignment.max_score || 100
-          }}
+          assignment={assignment}
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
+          onSuccess={handleEditSuccess}
         />
       )}
 
@@ -461,6 +506,17 @@ const AssignmentDetail = () => {
           assignmentTitle={assignment.title}
           open={showSubmissionDialog}
           onOpenChange={setShowSubmissionDialog}
+          onSuccess={handleSubmissionSuccess}
+        />
+      )}
+
+      {/* Submission Detail Dialog */}
+      {selectedSubmission && (
+        <SubmissionDetailDialog
+          submission={selectedSubmission}
+          assignment={assignment}
+          open={showSubmissionDetail}
+          onOpenChange={setShowSubmissionDetail}
         />
       )}
     </DashboardLayout>

@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Edit, Save, Camera, Mail, Phone, MapPin, Calendar, Award, BookOpen } from 'lucide-react';
+import { Edit, Save, Camera, Mail, Phone, MapPin, User, BookOpen, Award } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,54 +10,47 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import FileUploadButton from '@/components/FileUploadButton';
 
 const Profile = () => {
-  const { profile } = useAuth();
+  const { profile, updateProfile, uploadAvatar } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
-    name: profile?.full_name || '',
+    full_name: profile?.full_name || '',
     email: profile?.email || '',
-    phone: profile?.phone_number || '0901234567',
-    address: profile?.address || 'Hà Nội, Việt Nam',
-    bio: profile?.bio || 'Sinh viên ngành Công nghệ thông tin, đam mê lập trình web và mobile.',
-    dateOfBirth: '1999-05-15',
-    studentId: 'SV001'
+    phone_number: profile?.phone_number || '',
+    address: profile?.address || '',
+    bio: profile?.bio || '',
+    education: profile?.education || '',
+    experience: profile?.experience || '',
   });
 
-  const achievements = [
-    { title: 'Hoàn thành khóa học đầu tiên', date: '2025-03-15', icon: '🎓' },
-    { title: 'Đạt điểm 9+ trong 5 bài tập liên tiếp', date: '2025-04-01', icon: '⭐' },
-    { title: 'Nộp bài đúng hạn 100%', date: '2025-04-10', icon: '⏰' },
-    { title: 'Top 3 học sinh xuất sắc tháng', date: '2025-04-12', icon: '🏆' }
-  ];
-
-  const enrolledCourses = [
-    { name: 'Lập trình Web cơ bản', progress: 85, status: 'active' },
-    { name: 'React Nâng cao', progress: 45, status: 'active' },
-    { name: 'Node.js Backend', progress: 100, status: 'completed' }
-  ];
-
-  const learningStats = {
-    totalCourses: 3,
-    completedCourses: 1,
-    totalAssignments: 25,
-    completedAssignments: 21,
-    averageGrade: 8.5,
-    studyHours: 120
-  };
-
-  const handleSave = () => {
-    // Here you would typically save to a backend
-    setIsEditing(false);
+  const handleSave = async () => {
+    const { error } = await updateProfile(formData);
+    if (!error) {
+      setIsEditing(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      await uploadAvatar(file);
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">Hồ sơ cá nhân</h1>
@@ -70,53 +64,73 @@ const Profile = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Info */}
+          {/* Profile Card */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ảnh đại diện</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center space-y-4">
+                <div className="relative inline-block">
+                  <Avatar className="h-32 w-32 mx-auto">
+                    <AvatarImage src={profile?.avatar_url} alt={formData.full_name} />
+                    <AvatarFallback className="text-3xl">
+                      {formData.full_name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isEditing && (
+                    <div className="absolute -bottom-2 -right-2">
+                      <FileUploadButton
+                        onFileSelect={handleAvatarUpload}
+                        accept="image/*"
+                        variant="default"
+                        size="icon"
+                        className="rounded-full shadow-lg"
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">{formData.full_name}</h3>
+                  <Badge className={
+                    profile?.role === 'tutor' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                  }>
+                    {profile?.role === 'tutor' ? 'Giảng viên' : 'Học sinh'}
+                  </Badge>
+                </div>
+                
+                {uploading && (
+                  <p className="text-sm text-gray-500">Đang tải ảnh lên...</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Information Cards */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Info */}
             <Card>
               <CardHeader>
-                <CardTitle>Thông tin cơ bản</CardTitle>
+                <CardTitle className="flex items-center">
+                  <User className="h-5 w-5 mr-2" />
+                  Thông tin cơ bản
+                </CardTitle>
                 <CardDescription>Thông tin cá nhân và liên hệ</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-6 mb-6">
-                  <div className="relative">
-                    <Avatar className="h-20 w-20">
-                      <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} alt={formData.name} />
-                      <AvatarFallback className="text-xl">
-                        {formData.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    {isEditing && (
-                      <Button 
-                        size="sm" 
-                        className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold">{formData.name}</h3>
-                    <p className="text-gray-600">{profile?.role === 'tutor' ? 'Giảng viên' : 'Học sinh'}</p>
-                    {profile?.role === 'student' && (
-                      <p className="text-sm text-gray-500">Mã SV: {formData.studentId}</p>
-                    )}
-                  </div>
-                </div>
-
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Họ và tên</Label>
+                    <Label htmlFor="full_name">Họ và tên</Label>
                     {isEditing ? (
                       <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        id="full_name"
+                        value={formData.full_name}
+                        onChange={(e) => handleInputChange('full_name', e.target.value)}
                       />
                     ) : (
                       <div className="flex items-center space-x-2">
-                        <span>{formData.name}</span>
+                        <span>{formData.full_name}</span>
                       </div>
                     )}
                   </div>
@@ -139,39 +153,22 @@ const Profile = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Số điện thoại</Label>
+                    <Label htmlFor="phone_number">Số điện thoại</Label>
                     {isEditing ? (
                       <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        id="phone_number"
+                        value={formData.phone_number}
+                        onChange={(e) => handleInputChange('phone_number', e.target.value)}
                       />
                     ) : (
                       <div className="flex items-center space-x-2">
                         <Phone className="h-4 w-4 text-gray-400" />
-                        <span>{formData.phone}</span>
+                        <span>{formData.phone_number || 'Chưa cập nhật'}</span>
                       </div>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Ngày sinh</Label>
-                    {isEditing ? (
-                      <Input
-                        id="dateOfBirth"
-                        type="date"
-                        value={formData.dateOfBirth}
-                        onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                      />
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span>{formData.dateOfBirth}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="address">Địa chỉ</Label>
                     {isEditing ? (
                       <Input
@@ -182,124 +179,74 @@ const Profile = () => {
                     ) : (
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-4 w-4 text-gray-400" />
-                        <span>{formData.address}</span>
+                        <span>{formData.address || 'Chưa cập nhật'}</span>
                       </div>
                     )}
                   </div>
+                </div>
 
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="bio">Giới thiệu bản thân</Label>
-                    {isEditing ? (
-                      <Textarea
-                        id="bio"
-                        value={formData.bio}
-                        onChange={(e) => handleInputChange('bio', e.target.value)}
-                        rows={3}
-                      />
-                    ) : (
-                      <p className="text-gray-700">{formData.bio}</p>
-                    )}
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Giới thiệu bản thân</Label>
+                  {isEditing ? (
+                    <Textarea
+                      id="bio"
+                      value={formData.bio}
+                      onChange={(e) => handleInputChange('bio', e.target.value)}
+                      rows={3}
+                      placeholder="Hãy giới thiệu về bản thân..."
+                    />
+                  ) : (
+                    <p className="text-gray-700 min-h-[60px] p-3 bg-gray-50 rounded-md">
+                      {formData.bio || 'Chưa có giới thiệu'}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Learning Progress (Student only) */}
-            {profile?.role === 'student' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tiến độ học tập</CardTitle>
-                  <CardDescription>Các khóa học đang tham gia</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {enrolledCourses.map((course, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{course.name}</span>
-                          <div className="flex items-center space-x-2">
-                            <Badge 
-                              className={
-                                course.status === 'completed' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-blue-100 text-blue-800'
-                              }
-                            >
-                              {course.status === 'completed' ? 'Hoàn thành' : 'Đang học'}
-                            </Badge>
-                            <span className="text-sm font-medium">{course.progress}%</span>
-                          </div>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              course.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'
-                            }`}
-                            style={{ width: `${course.progress}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Learning Stats (Student only) */}
-            {profile?.role === 'student' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Thống kê học tập</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Khóa học tham gia:</span>
-                      <span className="font-medium">{learningStats.totalCourses}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Khóa học hoàn thành:</span>
-                      <span className="font-medium">{learningStats.completedCourses}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Bài tập đã nộp:</span>
-                      <span className="font-medium">
-                        {learningStats.completedAssignments}/{learningStats.totalAssignments}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Điểm trung bình:</span>
-                      <span className="font-medium text-blue-600">{learningStats.averageGrade}/10</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Giờ học tích lũy:</span>
-                      <span className="font-medium">{learningStats.studyHours}h</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Achievements */}
+            {/* Education & Experience */}
             <Card>
               <CardHeader>
-                <CardTitle>Thành tích</CardTitle>
-                <CardDescription>Các mốc đáng chú ý</CardDescription>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  Học vấn & Kinh nghiệm
+                </CardTitle>
+                <CardDescription>Thông tin về trình độ học vấn và kinh nghiệm</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {achievements.map((achievement, index) => (
-                    <div key={index} className="flex items-start space-x-3 p-2 bg-gray-50 rounded-lg">
-                      <span className="text-xl">{achievement.icon}</span>
-                      <div>
-                        <p className="font-medium text-sm">{achievement.title}</p>
-                        <p className="text-xs text-gray-500">{achievement.date}</p>
-                      </div>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="education">Học vấn</Label>
+                  {isEditing ? (
+                    <Textarea
+                      id="education"
+                      value={formData.education}
+                      onChange={(e) => handleInputChange('education', e.target.value)}
+                      rows={2}
+                      placeholder="Trình độ học vấn, bằng cấp..."
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Award className="h-4 w-4 text-gray-400" />
+                      <span>{formData.education || 'Chưa cập nhật'}</span>
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="experience">Kinh nghiệm</Label>
+                  {isEditing ? (
+                    <Textarea
+                      id="experience"
+                      value={formData.experience}
+                      onChange={(e) => handleInputChange('experience', e.target.value)}
+                      rows={3}
+                      placeholder="Kinh nghiệm làm việc, dự án đã tham gia..."
+                    />
+                  ) : (
+                    <p className="text-gray-700 min-h-[60px] p-3 bg-gray-50 rounded-md">
+                      {formData.experience || 'Chưa có thông tin kinh nghiệm'}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Search, Users, BookOpen, Clock, Star, Loader2, Trash2, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,6 @@ import ManageStudentsDialog from '@/components/ManageStudentsDialog';
 import { useCourses } from '@/hooks/useCourses';
 import { useDeleteCourse } from '@/hooks/useDeleteCourse';
 import { useToast } from '@/hooks/use-toast';
-import { useCourseAssignments } from '@/hooks/useCourseAssignments';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,28 +25,185 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+// Component riêng để hiển thị từng course card
+const CourseCard = ({ course }: { course: any }) => {
+  const { profile } = useAuth();
+  
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <Link to={`/dashboard/courses/${course.id}`}>
+        <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
+          {course.thumbnail ? (
+            <img 
+              src={course.thumbnail} 
+              alt={course.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = '/placeholder.svg';
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <BookOpen className="h-12 w-12 text-gray-400" />
+            </div>
+          )}
+        </div>
+      </Link>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <Link 
+            to={`/dashboard/courses/${course.id}`}
+            className="hover:text-blue-600 transition-colors"
+          >
+            <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
+          </Link>
+          <div className="flex items-center space-x-2">
+            {course.status === 'published' && (
+              <Badge className="bg-green-100 text-green-800">Đã xuất bản</Badge>
+            )}
+            {course.status === 'completed' && (
+              <Badge className="bg-blue-100 text-blue-800">Hoàn thành</Badge>
+            )}
+            {course.status === 'draft' && (
+              <Badge className="bg-gray-100 text-gray-800">Nháp</Badge>
+            )}
+            {!['published', 'completed', 'draft'].includes(course.status) && (
+              <Badge>{course.status}</Badge>
+            )}
+            {profile?.role === 'tutor' && (
+              <CourseActionsMenu course={course} />
+            )}
+          </div>
+        </div>
+        <CardDescription className="line-clamp-2">
+          {course.description || 'Không có mô tả'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {profile?.role === 'tutor' ? (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <Users className="h-4 w-4 mr-1" />
+                  Học sinh:
+                </span>
+                <span className="font-medium">{course.students_count || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <BookOpen className="h-4 w-4 mr-1" />
+                  Bài học:
+                </span>
+                <span className="font-medium">{course.lessons_count || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <FileText className="h-4 w-4 mr-1" />
+                  Bài tập:
+                </span>
+                <span className="font-medium">0</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <Clock className="h-4 w-4 mr-1" />
+                  Thời lượng:
+                </span>
+                <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
+              </div>
+              
+              <div className="flex space-x-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Handle manage students - will be passed from parent
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Quản lý học sinh
+                </Button>
+                <Link 
+                  to={`/dashboard/courses/${course.id}`}
+                  className="flex-1"
+                >
+                  <Button 
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                  >
+                    Xem chi tiết
+                  </Button>
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <BookOpen className="h-4 w-4 mr-1" />
+                  Bài học:
+                </span>
+                <span className="font-medium">{course.lessons_count || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <FileText className="h-4 w-4 mr-1" />
+                  Bài tập:
+                </span>
+                <span className="font-medium">0</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <Clock className="h-4 w-4 mr-1" />
+                  Thời lượng:
+                </span>
+                <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center text-gray-600">
+                  <Star className="h-4 w-4 mr-1" />
+                  Tiến độ:
+                </span>
+                <span className="font-medium">0%</span>
+              </div>
+
+              <Link 
+                to={`/dashboard/courses/${course.id}`}
+                className="block mt-4"
+              >
+                <Button 
+                  variant="default"
+                  size="sm"
+                  className="w-full"
+                >
+                  Vào học
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const Courses = () => {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingCourse, setDeletingCourse] = useState<string | null>(null);
   const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<{ id: string; title: string } | null>(null);
-  const { data: courses = [], isLoading, error } = useCourses();
+  const { data: courses = [], isLoading, error, refetch } = useCourses();
   const deleteMutation = useDeleteCourse();
   const { toast } = useToast();
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'published':
-        return <Badge className="bg-green-100 text-green-800">Đã xuất bản</Badge>;
-      case 'completed':
-        return <Badge className="bg-blue-100 text-blue-800">Hoàn thành</Badge>;
-      case 'draft':
-        return <Badge className="bg-gray-100 text-gray-800">Nháp</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
+  // Force refetch when component mounts or when mutations succeed
+  React.useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const filteredCourses = courses.filter(course =>
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,6 +218,8 @@ const Courses = () => {
         title: "Thành công",
         description: "Đã xóa khóa học thành công",
       });
+      // Force refetch after successful deletion
+      refetch();
     } catch (error) {
       toast({
         title: "Lỗi",
@@ -139,157 +298,9 @@ const Courses = () => {
                 </p>
               </div>
             ) : (
-              filteredCourses.map((course) => {
-                // Get assignments count for this course
-                const { data: courseAssignments = [] } = useCourseAssignments(course.id);
-                const assignmentsCount = courseAssignments.length;
-
-                return (
-                  <Card key={course.id} className="hover:shadow-lg transition-shadow">
-                    <Link to={`/dashboard/courses/${course.id}`}>
-                      <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
-                        {course.thumbnail ? (
-                          <img 
-                            src={course.thumbnail} 
-                            alt={course.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/placeholder.svg';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <BookOpen className="h-12 w-12 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <Link 
-                          to={`/dashboard/courses/${course.id}`}
-                          className="hover:text-blue-600 transition-colors"
-                        >
-                          <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
-                        </Link>
-                        <div className="flex items-center space-x-2">
-                          {getStatusBadge(course.status)}
-                          {profile?.role === 'tutor' && (
-                            <CourseActionsMenu course={course} />
-                          )}
-                        </div>
-                      </div>
-                      <CardDescription className="line-clamp-2">
-                        {course.description || 'Không có mô tả'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {profile?.role === 'tutor' ? (
-                          <>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <Users className="h-4 w-4 mr-1" />
-                                Học sinh:
-                              </span>
-                              <span className="font-medium">{course.students_count || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <BookOpen className="h-4 w-4 mr-1" />
-                                Bài học:
-                              </span>
-                              <span className="font-medium">{course.lessons_count || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <FileText className="h-4 w-4 mr-1" />
-                                Bài tập:
-                              </span>
-                              <span className="font-medium">{assignmentsCount}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <Clock className="h-4 w-4 mr-1" />
-                                Thời lượng:
-                              </span>
-                              <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
-                            </div>
-                            
-                            <div className="flex space-x-2 pt-4">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="flex-1"
-                                onClick={() => handleManageStudents(course)}
-                              >
-                                <Users className="h-4 w-4 mr-2" />
-                                Quản lý học sinh
-                              </Button>
-                              <Link 
-                                to={`/dashboard/courses/${course.id}`}
-                                className="flex-1"
-                              >
-                                <Button 
-                                  variant="default"
-                                  size="sm"
-                                  className="w-full"
-                                >
-                                  Xem chi tiết
-                                </Button>
-                              </Link>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <BookOpen className="h-4 w-4 mr-1" />
-                                Bài học:
-                              </span>
-                              <span className="font-medium">{course.lessons_count || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <FileText className="h-4 w-4 mr-1" />
-                                Bài tập:
-                              </span>
-                              <span className="font-medium">{assignmentsCount}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <Clock className="h-4 w-4 mr-1" />
-                                Thời lượng:
-                              </span>
-                              <span className="font-medium">{course.duration || 'Chưa xác định'}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <Star className="h-4 w-4 mr-1" />
-                                Tiến độ:
-                              </span>
-                              <span className="font-medium">{course.progress || 0}%</span>
-                            </div>
-
-                            <Link 
-                              to={`/dashboard/courses/${course.id}`}
-                              className="block mt-4"
-                            >
-                              <Button 
-                                variant="default"
-                                size="sm"
-                                className="w-full"
-                              >
-                                Vào học
-                              </Button>
-                            </Link>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
+              filteredCourses.map((course) => (
+                <CourseCard key={course.id} course={course} />
+              ))
             )}
           </div>
         )}

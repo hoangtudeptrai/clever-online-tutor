@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,42 +31,62 @@ export const useDocuments = () => {
   return useQuery({
     queryKey: ['documents', profile?.id],
     queryFn: async () => {
-      // Lấy tài liệu và join với bảng courses
-      const { data: documentsData, error: documentsError } = await supabase
-        .from('course_documents')
-        .select(`
-          *,
-          course:courses(title)
-        `);
+      if (!profile) return [];
 
-      if (documentsError) {
-        console.error('Error fetching documents:', documentsError);
-        throw documentsError;
+      try {
+        // Lấy tài liệu
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('course_documents')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (documentsError) {
+          console.error('Error fetching documents:', documentsError);
+          throw documentsError;
+        }
+
+        if (!documentsData || documentsData.length === 0) {
+          return [];
+        }
+
+        // Lấy thông tin courses
+        const courseIds = [...new Set(documentsData.map(doc => doc.course_id))];
+        const { data: coursesData, error: coursesError } = await supabase
+          .from('courses')
+          .select('id, title')
+          .in('id', courseIds);
+
+        if (coursesError) {
+          console.error('Error fetching courses:', coursesError);
+        }
+
+        // Lấy thông tin người tạo từ bảng profiles
+        const uploaderIds = [...new Set(documentsData.map(doc => doc.uploaded_by))];
+        const { data: uploadersData, error: uploadersError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', uploaderIds);
+
+        if (uploadersError) {
+          console.error('Error fetching uploaders:', uploadersError);
+        }
+
+        // Tạo maps để lookup
+        const coursesMap = new Map((coursesData || []).map(c => [c.id, c]));
+        const uploadersMap = new Map((uploadersData || []).map(u => [u.id, u]));
+        
+        // Transform the data to match our interface
+        const transformedData = documentsData.map(doc => ({
+          ...doc,
+          course: coursesMap.get(doc.course_id) || null,
+          uploader: uploadersMap.get(doc.uploaded_by) || null
+        })) as Document[];
+
+        return transformedData;
+      } catch (error) {
+        console.error('Error in useDocuments:', error);
+        throw error;
       }
-
-      // Lấy thông tin người tạo từ bảng profiles
-      const uploaderIds = [...new Set(documentsData?.map(doc => doc.uploaded_by) || [])];
-      const { data: uploadersData, error: uploadersError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .in('id', uploaderIds);
-
-      if (uploadersError) {
-        console.error('Error fetching uploaders:', uploadersError);
-        throw uploadersError;
-      }
-
-      // Map uploaders data vào documents
-      const uploadersMap = new Map(uploadersData?.map(u => [u.id, u]));
-      
-      // Transform the data to match our interface
-      const transformedData = documentsData?.map(doc => ({
-        ...doc,
-        course: Array.isArray(doc.course) ? doc.course[0] : doc.course,
-        uploader: uploadersMap.get(doc.uploaded_by) || null
-      })) as Document[];
-
-      return transformedData;
     },
     enabled: !!profile,
   });
@@ -85,11 +106,15 @@ export const useCreateDocument = () => {
       file_type?: string;
       course_id: string;
     }) => {
+      if (!profile?.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase
         .from('course_documents')
         .insert({
           ...documentData,
-          uploaded_by: profile?.id,
+          uploaded_by: profile.id,
         })
         .select()
         .single();

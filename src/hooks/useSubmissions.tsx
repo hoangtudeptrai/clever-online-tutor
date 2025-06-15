@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,12 +29,16 @@ export const useCreateSubmission = () => {
       content: string;
       files?: File[];
     }) => {
+      if (!profile?.id) {
+        throw new Error('User not authenticated');
+      }
+
       // Create submission
       const { data: submission, error } = await supabase
         .from('assignment_submissions')
         .insert({
           assignment_id: assignmentId,
-          student_id: profile?.id,
+          student_id: profile.id,
           content,
           status: 'submitted',
           submitted_at: new Date().toISOString()
@@ -48,15 +51,23 @@ export const useCreateSubmission = () => {
       // Handle file uploads if any
       if (files.length > 0) {
         const filePromises = files.map(async (file) => {
-          const fileName = `${Date.now()}_${file.name}`;
-          const filePath = `submissions/${submission.id}/${fileName}`;
+          const filePath = `submissions/${submission.id}/${file.name}`;
           
+          // Upload file to storage
+          const { error: uploadError } = await supabase.storage
+            .from('assignment-files')
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+          
+          // Create file record
           return supabase.from('assignment_submission_files').insert({
             submission_id: submission.id,
             file_name: file.name,
             file_path: filePath,
             file_type: file.type,
-            file_size: file.size
+            file_size: file.size,
+            uploaded_at: new Date().toISOString()
           });
         });
 

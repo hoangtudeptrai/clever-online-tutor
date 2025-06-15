@@ -143,7 +143,7 @@ const CourseActionsMenu: React.FC<CourseActionsMenuProps> = ({ course }) => {
 
       <ManageStudentsDialog
         courseId={course.id}
-        courseName={course.title}
+        courseTitle={course.title}
         open={showStudentsDialog}
         onOpenChange={setShowStudentsDialog}
       />

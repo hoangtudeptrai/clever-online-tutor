@@ -216,7 +216,7 @@ const StudentsManagement = () => {
       {/* Manage Students Dialog */}
       <ManageStudentsDialog
         courseId={courseId || ''}
-        courseName={currentCourse?.title || 'Khóa học'}
+        courseTitle={currentCourse?.title || 'Khóa học'}
         open={showManageDialog}
         onOpenChange={setShowManageDialog}
       />

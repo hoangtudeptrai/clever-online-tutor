@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Upload, X, Calendar } from 'lucide-react';
 import {
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useCourses } from '@/hooks/useCourses';
 import { useCreateAssignment } from '@/hooks/useAssignments';
-import { useFileUpload } from '@/hooks/useFileUpload';
+import { useUploadAssignmentFile } from '@/hooks/useAssignmentFiles';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -39,13 +40,13 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
     due_date: '',
     max_score: '10',
     instructions: '',
-    attachments: [] as File[]
   });
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   const { profile } = useAuth();
   const { data: courses = [] } = useCourses();
   const createAssignmentMutation = useCreateAssignment();
-  const { uploadFile, uploading } = useFileUpload();
+  const uploadFileMutation = useUploadAssignmentFile();
   const { toast } = useToast();
 
   // Lọc khóa học của giáo viên hiện tại
@@ -71,13 +72,28 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
         ? `${formData.description}\n\nHướng dẫn:\n${formData.instructions}`
         : formData.instructions;
 
-      await createAssignmentMutation.mutateAsync({
+      // Create assignment first
+      const newAssignment = await createAssignmentMutation.mutateAsync({
         title: formData.title,
         description: combinedDescription,
         course_id: formData.course_id,
         due_date: formData.due_date ? new Date(formData.due_date).toISOString() : undefined,
         max_score: parseInt(formData.max_score),
       });
+
+      // Upload files if any
+      if (attachments.length > 0 && profile?.id) {
+        const uploadPromises = attachments.map(file =>
+          uploadFileMutation.mutateAsync({
+            assignmentId: newAssignment.id,
+            file,
+            uploadedBy: profile.id,
+            title: file.name
+          })
+        );
+        
+        await Promise.all(uploadPromises);
+      }
 
       toast({
         title: "Thành công",
@@ -92,8 +108,8 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
         due_date: '',
         max_score: '10',
         instructions: '',
-        attachments: []
       });
+      setAttachments([]);
     } catch (error) {
       console.error('Error creating assignment:', error);
       toast({
@@ -118,12 +134,12 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
       return;
     }
 
-    setFormData({ ...formData, attachments: [...formData.attachments, ...files] });
+    setAttachments([...attachments, ...files]);
   };
 
   const removeAttachment = (index: number) => {
-    const newAttachments = formData.attachments.filter((_, i) => i !== index);
-    setFormData({ ...formData, attachments: newAttachments });
+    const newAttachments = attachments.filter((_, i) => i !== index);
+    setAttachments(newAttachments);
   };
 
   return (
@@ -245,10 +261,10 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
                 </CardContent>
               </Card>
 
-              {formData.attachments.length > 0 && (
+              {attachments.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <Label>File đã chọn:</Label>
-                  {formData.attachments.map((file, index) => (
+                  {attachments.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                       <span className="text-sm">{file.name}</span>
                       <Button
@@ -273,9 +289,9 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
             <Button 
               type="submit" 
               className="bg-blue-600 hover:bg-blue-700"
-              disabled={createAssignmentMutation.isPending || uploading}
+              disabled={createAssignmentMutation.isPending || uploadFileMutation.isPending}
             >
-              {createAssignmentMutation.isPending || uploading ? 'Đang tạo...' : 'Tạo bài tập'}
+              {createAssignmentMutation.isPending || uploadFileMutation.isPending ? 'Đang tạo...' : 'Tạo bài tập'}
             </Button>
           </div>
         </form>

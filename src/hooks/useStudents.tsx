@@ -19,6 +19,7 @@ export interface Student {
 export interface CourseStudent extends Student {
   enrollment_id?: string;
   course_id?: string;
+  last_active?: string;
 }
 
 export const useStudents = () => {
@@ -27,17 +28,22 @@ export const useStudents = () => {
   return useQuery({
     queryKey: ['students'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, phone_number, avatar_url, created_at')
-        .eq('role', 'student')
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, phone_number, avatar_url, created_at')
+          .eq('role', 'student')
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching students:', error);
+        if (error) {
+          console.error('Error fetching students:', error);
+          throw error;
+        }
+        return (data || []) as Student[];
+      } catch (error) {
+        console.error('Error in useStudents:', error);
         throw error;
       }
-      return data as Student[];
     },
     enabled: !!profile && profile.role === 'tutor',
   });
@@ -47,46 +53,61 @@ export const useCourseStudents = (courseId: string) => {
   return useQuery({
     queryKey: ['course-students', courseId],
     queryFn: async () => {
-      // First get the enrollments with student details
-      const { data: enrollments, error } = await supabase
-        .from('course_enrollments')
-        .select(`
-          id,
-          student_id,
-          enrolled_at,
-          progress,
-          status,
-          last_active,
-          student:profiles!course_enrollments_student_id_fkey(
-            id,
-            full_name,
-            email,
-            phone_number,
-            avatar_url
-          )
-        `)
-        .eq('course_id', courseId)
-        .order('enrolled_at', { ascending: false });
+      if (!courseId) return [];
 
-      if (error) {
-        console.error('Error fetching course students:', error);
+      try {
+        // First get the enrollments
+        const { data: enrollments, error } = await supabase
+          .from('course_enrollments')
+          .select('id, student_id, enrolled_at, progress, status, last_active')
+          .eq('course_id', courseId)
+          .order('enrolled_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching course enrollments:', error);
+          throw error;
+        }
+
+        if (!enrollments || enrollments.length === 0) {
+          return [];
+        }
+
+        // Get student details
+        const studentIds = enrollments.map(e => e.student_id);
+        const { data: students, error: studentsError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, phone_number, avatar_url')
+          .in('id', studentIds);
+
+        if (studentsError) {
+          console.error('Error fetching students:', studentsError);
+          throw studentsError;
+        }
+
+        // Create a map of students
+        const studentsMap = new Map((students || []).map(s => [s.id, s]));
+
+        // Transform the data to match our interface
+        return enrollments.map(enrollment => {
+          const student = studentsMap.get(enrollment.student_id);
+          return {
+            id: enrollment.student_id,
+            enrollment_id: enrollment.id,
+            course_id: courseId,
+            full_name: student?.full_name || '',
+            email: student?.email || '',
+            phone_number: student?.phone_number || '',
+            avatar_url: student?.avatar_url || '',
+            enrolled_at: enrollment.enrolled_at,
+            progress: enrollment.progress,
+            status: enrollment.status,
+            last_active: enrollment.last_active
+          };
+        }) as CourseStudent[];
+      } catch (error) {
+        console.error('Error in useCourseStudents:', error);
         throw error;
       }
-
-      // Transform the data to match our interface
-      return enrollments?.map(enrollment => ({
-        id: enrollment.student_id,
-        enrollment_id: enrollment.id,
-        course_id: courseId,
-        full_name: (enrollment.student as any)?.full_name || '',
-        email: (enrollment.student as any)?.email || '',
-        phone_number: (enrollment.student as any)?.phone_number || '',
-        avatar_url: (enrollment.student as any)?.avatar_url || '',
-        enrolled_at: enrollment.enrolled_at,
-        progress: enrollment.progress,
-        status: enrollment.status,
-        last_active: enrollment.last_active
-      })) as CourseStudent[] || [];
     },
     enabled: !!courseId,
   });

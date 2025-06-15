@@ -440,6 +440,9 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           id: string
           is_read: boolean | null
           receiver_id: string | null
@@ -450,6 +453,9 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           is_read?: boolean | null
           receiver_id?: string | null
@@ -460,6 +466,9 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           is_read?: boolean | null
           receiver_id?: string | null

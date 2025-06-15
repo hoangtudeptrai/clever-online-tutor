@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Send, Upload, X } from 'lucide-react';
 import {
@@ -18,13 +17,15 @@ interface StudentSubmissionDialogProps {
   assignmentTitle: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 const StudentSubmissionDialog: React.FC<StudentSubmissionDialogProps> = ({
   assignmentId,
   assignmentTitle,
   open,
-  onOpenChange
+  onOpenChange,
+  onSuccess
 }) => {
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -45,6 +46,7 @@ const StudentSubmissionDialog: React.FC<StudentSubmissionDialogProps> = ({
       onSuccess: () => {
         setContent('');
         setAttachments([]);
+        onSuccess?.();
         onOpenChange(false);
       }
     });

@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Plus } from 'lucide-react';
+import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Plus, Bell } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -10,12 +9,16 @@ import DashboardLayout from '@/components/DashboardLayout';
 import CreateCourseDialog from '@/components/CreateCourseDialog';
 import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
 import CreateDocumentDialog from '@/components/CreateDocumentDialog';
+import RecentActivities from '@/components/RecentActivities';
+import StudentActivities from '@/components/StudentActivities';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 
 const Dashboard = () => {
   const { profile } = useAuth();
   const { data: stats, isLoading: statsLoading } = useStats();
+  const { data: unreadCounts, isLoading: isLoadingCounts } = useUnreadCounts();
 
   const getTeacherStats = () => {
     if (!stats) return [];
@@ -97,6 +100,14 @@ const Dashboard = () => {
 
   const displayStats = profile?.role === 'tutor' ? getTeacherStats() : getStudentStats();
 
+  if (isLoadingCounts) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -159,75 +170,85 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Recent Activity & Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5" />
-                <span>Hoạt động gần đây</span>
-              </CardTitle>
-              <CardDescription>
-                {profile?.role === 'tutor' 
-                  ? 'Theo dõi hoạt động mới nhất của học sinh'
-                  : 'Các bài học và bài tập gần đây'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-center py-8 text-gray-500">
-                  <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <p>Chưa có hoạt động nào gần đây</p>
+        {/* Main Content */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Hoạt động gần đây */}
+            <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-lg bg-blue-50">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-semibold">Hoạt động gần đây</CardTitle>
+                    <CardDescription className="text-sm">Các hoạt động mới nhất trong hệ thống</CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {profile?.role === 'tutor' ? (
+                    <RecentActivities />
+                  ) : (
+                    <StudentActivities />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Thao tác nhanh</CardTitle>
-              <CardDescription>
-                {profile?.role === 'tutor' 
-                  ? 'Các tác vụ thường dùng cho giảng viên'
-                  : 'Các tác vụ thường dùng cho học sinh'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {profile?.role === 'tutor' ? (
-                  <>
-                    <CreateCourseDialog />
-                    <CreateAssignmentDialog />
-                    <CreateDocumentDialog />
+            {/* Quản lý & Học sinh Container */}
+            <div className="md:col-span-2 lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Quản lý */}
+              <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 rounded-lg bg-green-50">
+                      <BookOpen className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Quản lý</CardTitle>
+                      <CardDescription className="text-sm">Quản lý khóa học và bài tập</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
                     <Link to="/dashboard/courses" className="block">
                       <Button className="w-full justify-start" variant="outline">
                         <BookOpen className="h-4 w-4 mr-2" />
                         Quản lý khóa học
                       </Button>
                     </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/dashboard/courses" className="block">
-                      <Button className="w-full justify-start" variant="outline">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Xem khóa học
-                      </Button>
-                    </Link>
                     <Link to="/dashboard/assignments" className="block">
                       <Button className="w-full justify-start" variant="outline">
                         <FileText className="h-4 w-4 mr-2" />
-                        Làm bài tập
+                        Quản lý bài tập
                       </Button>
                     </Link>
-                    <Link to="/dashboard/documents" className="block">
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Học sinh */}
+              <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 rounded-lg bg-purple-50">
+                      <Users className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Học sinh</CardTitle>
+                      <CardDescription className="text-sm">Quản lý và theo dõi học sinh</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Link to="/dashboard/students" className="block">
                       <Button className="w-full justify-start" variant="outline">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Tài liệu học tập
+                        <Users className="h-4 w-4 mr-2" />
+                        Danh sách học sinh
                       </Button>
                     </Link>
                     <Link to="/dashboard/grades" className="block">
@@ -236,11 +257,11 @@ const Dashboard = () => {
                         Xem điểm số
                       </Button>
                     </Link>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
 
         {/* Progress Section for Students */}
