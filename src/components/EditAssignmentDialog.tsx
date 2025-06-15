@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -41,7 +42,8 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     title: assignment.title,
-    description: assignment.description || '',
+    description: '',
+    instructions: '',
     course_id: assignment.course_id,
     due_date: assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '',
     max_score: assignment.max_score?.toString() || '100'
@@ -54,9 +56,25 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
 
   useEffect(() => {
     if (assignment) {
+      const descriptionString = assignment.description || '';
+      const separator = '\n\nHướng dẫn:\n';
+      const separatorIndex = descriptionString.indexOf(separator);
+
+      let description = '';
+      let instructions = '';
+
+      if (separatorIndex !== -1) {
+        description = descriptionString.substring(0, separatorIndex);
+        instructions = descriptionString.substring(separatorIndex + separator.length);
+      } else {
+        description = '';
+        instructions = descriptionString;
+      }
+      
       setFormData({
         title: assignment.title,
-        description: assignment.description || '',
+        description,
+        instructions,
         course_id: assignment.course_id,
         due_date: assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '',
         max_score: assignment.max_score?.toString() || '100'
@@ -91,11 +109,15 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
     e.preventDefault();
     
     try {
+      const combinedDescription = formData.description
+        ? `${formData.description}\n\nHướng dẫn:\n${formData.instructions}`
+        : formData.instructions;
+
       // Update assignment
       await updateAssignmentMutation.mutateAsync({
         id: assignment.id,
         title: formData.title,
-        description: formData.description,
+        description: combinedDescription,
         course_id: formData.course_id,
         due_date: formData.due_date || null,
         max_score: parseInt(formData.max_score),
@@ -168,13 +190,24 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Mô tả</Label>
-                <Textarea
+                <Label htmlFor="description">Mô tả ngắn</Label>
+                <Input
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Mô tả chi tiết về bài tập"
+                  placeholder="Mô tả ngắn gọn về bài tập"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="instructions">Hướng dẫn chi tiết *</Label>
+                <Textarea
+                  id="instructions"
+                  value={formData.instructions}
+                  onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                  placeholder="Nhập hướng dẫn chi tiết cho bài tập..."
                   rows={4}
+                  required
                 />
               </div>
 
