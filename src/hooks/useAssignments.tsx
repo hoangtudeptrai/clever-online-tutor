@@ -51,7 +51,23 @@ export const useAssignments = () => {
           .select('*');
 
         if (profile.role === 'student') {
-          query = query.eq('assignment_status', 'published');
+          const { data: enrolledCourseIdsData, error: enrolledCoursesError } = await supabase
+            .from('course_enrollments')
+            .select('course_id')
+            .eq('student_id', profile.id);
+
+          if (enrolledCoursesError) {
+            console.error('Error fetching student enrollments:', enrolledCoursesError);
+            throw enrolledCoursesError;
+          }
+          
+          const enrolledCourseIds = enrolledCourseIdsData?.map(enrollment => enrollment.course_id) || [];
+
+          if (enrolledCourseIds.length === 0) {
+            return [];
+          }
+
+          query = query.eq('assignment_status', 'published').in('course_id', enrolledCourseIds);
         }
 
         const { data: assignments, error } = await query.order('created_at', { ascending: false });
