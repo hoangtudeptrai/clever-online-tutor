@@ -94,13 +94,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               </Button>
               <div className="flex items-center space-x-3">
                 <Avatar>
-                  <AvatarImage src={user?.avatar} alt={user?.name} />
+                  <AvatarImage src={user?.avatar} alt={user?.full_name} />
                   <AvatarFallback>
-                    {user?.name?.charAt(0) || 'U'}
+                    {user?.full_name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                  <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
                   <p className="text-xs text-gray-600">
                     {user?.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}
                   </p>

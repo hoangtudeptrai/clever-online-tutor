@@ -21,8 +21,8 @@ const Courses = () => {
   const teacherCourses: TeacherCourse[] = row.map(course => ({
     ...course,
     id: course.id,
-    students: 0,
-    lessons: 0,
+    students_count: course.students_count || 0,
+    lessons_count: course.lessons_count || 0,
     progress: 0,
     status: 'draft',
     thumbnail: course.thumbnail || '/placeholder.svg',
@@ -48,7 +48,6 @@ const Courses = () => {
   const getCourses = async () => {
   try {
     const res = await getApi(`${COURSES_API.GET_ALL}`);
-    console.log('res', res);
 
     if (!res?.data) return;
 
@@ -160,14 +159,14 @@ const Courses = () => {
                           <Users className="h-4 w-4 mr-1" />
                           Học sinh:
                         </span>
-                        <span className="font-medium">{(course as TeacherCourse).students}</span>
+                        <span className="font-medium">{(course as TeacherCourse).students_count}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center text-gray-600">
                           <BookOpen className="h-4 w-4 mr-1" />
                           Bài học:
                         </span>
-                        <span className="font-medium">{course.lessons}</span>
+                        <span className="font-medium">{(course as TeacherCourse).lessons_count}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center text-gray-600">
@@ -202,7 +201,7 @@ const Courses = () => {
                           ></div>
                         </div>
                         <div className="text-sm text-gray-600">
-                          {(course as StudentCourse).completedLessons}/{course.lessons} bài học
+                          {(course as StudentCourse).completedLessons}/{(course as TeacherCourse).lessons_count} bài học
                         </div>
                       </div>
                       {(course as StudentCourse).nextLesson && (

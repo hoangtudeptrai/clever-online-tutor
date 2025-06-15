@@ -6,8 +6,8 @@ export interface Course {
   duration: string; // in minutes
 //   level: CourseLevel;
 //   status: CourseStatus;
-  lesson_count: number;
-  student_count: number;
+  lessons_count: number;
+  students_count: number;
   instructor_id: string;
   created_at: string;
   updated_at: string;
@@ -23,17 +23,8 @@ export interface CourseBasicInfo {
   instructor_id: string;
   duration: string;
   thumbnail?: string;
-}
-
-export interface CourseRequest {
-  title: string;
-  description: string;
-  thumbnail?: string;
-  duration: string;
-  instructor_id: string;
-  maxStudents: number;
-//   level: CourseLevel;
-//   status: CourseStatus;
+  lessons_count: number;
+  students_count: number;
 }
 
 export interface CourseResponse {
@@ -52,8 +43,8 @@ export interface TeacherCourse {
   id: string;
   title: string;
   description: string;
-  students: number;
-  lessons: number;
+  lessons_count: number;
+  students_count: number;
   progress: number;
   status: string;
   thumbnail: string;

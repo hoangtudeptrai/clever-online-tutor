@@ -18,12 +18,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import EditCourseDialog from './EditCourseDialog';
-import { CourseBasicInfo } from '@/types/course';
+import { TeacherCourse } from '@/types/course';
 import { deleteApi } from '@/utils/api';
 import { COURSES_API } from './api-url';
 
 interface CourseActionsMenuProps {
-  course: CourseBasicInfo;
+  course: TeacherCourse;
   onSuccess: () => void;
 }
 

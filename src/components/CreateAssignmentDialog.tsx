@@ -72,7 +72,7 @@ const CreateAssignmentDialog = () => {
       <DialogTrigger asChild>
         <Button className="bg-blue-600 hover:bg-blue-700">
           <Plus className="h-4 w-4 mr-2" />
-          Tạo bài tập mới
+          Tạo bài tập mới 
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">

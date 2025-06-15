@@ -14,56 +14,58 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { COURSES_API, FILES_API } from './api-url';
 import { getApi, postApi, putApi } from '@/utils/api';
-import {  CourseBasicInfo } from '@/types/course';
+import { TeacherCourse } from '@/types/course';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface EditCourseDialogProps {
-  course: CourseBasicInfo;
+  course: TeacherCourse;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
-const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpenChange, onSuccess }) => {
+
+const EditCourseDialog: React.FC<EditCourseDialogProps> = ({
+  course,
+  open,
+  onOpenChange,
+  onSuccess,
+}) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
-    title: course.title,
-    description: course.description,
-    instructor_id: course.instructor_id,
-    duration: course.duration,
-    thumbnail: null
+    ...course,
   });
 
   useEffect(() => {
-    if (!open || !course.id) return; // chỉ gọi API khi dialog mở và có id hợp lệ
-  
+    if (!open || !course?.id) return;
+
     const fetchCourse = async () => {
       try {
-        const res = await getApi(`${COURSES_API.GET_BY_ID(course.id)}`);
+        const res = await getApi(`${COURSES_API.GET_BY_ID(course?.id)}`);
         setFormData({
-          ...formData,
-          thumbnail: res.data.thumbnail
+          ...course,
+          thumbnail: res.data?.thumbnail,
         });
       } catch (error) {
         console.error('Error fetching course by id:', error);
       }
     };
-  
+
     fetchCourse();
-  }, [open, course.id]);  
+  }, [open, course?.id, course]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Logic cập nhật khóa học
-    putApi(`${COURSES_API.UPDATE(course.id)}`, formData).then((res) => {
-      onOpenChange(false)
-      onSuccess()
-    })
-    .catch((err) => {
-      console.log('err', err);
-    })
-    .finally(() => {
-      onOpenChange(false)
-    });
+    putApi(`${COURSES_API.UPDATE(course?.id)}`, formData)
+      .then(() => {
+        onOpenChange(false);
+        onSuccess();
+      })
+      .catch((err) => {
+        console.log('err', err);
+      })
+      .finally(() => {
+        onOpenChange(false);
+      });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,14 +77,13 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
 
       const uploadData = new FormData();
       uploadData.append('file', file, file.name);
-      
+
       const res = await postApi(`${FILES_API.UPLOAD(user.id)}`, uploadData);
       if (res?.data?.file_name) {
         setFormData({ ...formData, thumbnail: res?.data.file_name });
       }
     } catch (error) {
       console.error('Error uploading file:', error);
-    } finally {
     }
   };
 
@@ -91,9 +92,7 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Chỉnh sửa khóa học</DialogTitle>
-          <DialogDescription>
-            Cập nhật thông tin khóa học
-          </DialogDescription>
+          <DialogDescription>Cập nhật thông tin khóa học</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -102,7 +101,7 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
               <Label htmlFor="edit-title">Tên khóa học *</Label>
               <Input
                 id="edit-title"
-                value={formData.title}
+                value={formData?.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Nhập tên khóa học"
                 required
@@ -113,7 +112,7 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
               <Label htmlFor="edit-description">Mô tả khóa học *</Label>
               <Textarea
                 id="edit-description"
-                value={formData.description}
+                value={formData?.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Nhập mô tả chi tiết về khóa học"
                 className="min-h-[100px]"
@@ -126,21 +125,11 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
                 <Label htmlFor="edit-duration">Thời lượng</Label>
                 <Input
                   id="edit-duration"
-                  value={formData.duration}
+                  value={formData?.duration}
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                   placeholder="VD: 12 tuần"
                 />
               </div>
-              {/* <div>
-                <Label htmlFor="edit-maxStudents">Số học sinh tối đa</Label>
-                <Input
-                  id="edit-maxStudents"
-                  type="number"
-                  value={formData.maxStudents}
-                  onChange={(e) => setFormData({ ...formData, maxStudents: e.target.value })}
-                  placeholder="VD: 30"
-                />
-              </div> */}
             </div>
 
             <div>
@@ -150,13 +139,17 @@ const EditCourseDialog: React.FC<EditCourseDialogProps> = ({ course, open, onOpe
                   <div className="text-center">
                     <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <div className="space-y-2">
-                      <Button type="button" variant="outline" onClick={() => document.getElementById('edit-thumbnail')?.click()}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('edit-thumbnail')?.click()}
+                      >
                         Chọn ảnh mới
                       </Button>
                       <p className="text-sm text-gray-500">PNG, JPG lên đến 5MB</p>
-                      {formData.thumbnail && (
+                      {formData?.thumbnail && (
                         <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
-                          <span>{formData.thumbnail}</span>
+                          <span>{formData?.thumbnail}</span>
                           <Button
                             type="button"
                             variant="ghost"

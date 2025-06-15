@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import {  useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,27 +22,72 @@ import CreateDocumentDialog from '@/components/CreateDocumentDialog';
 import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
 import DocumentActionsMenu from '@/components/DocumentActionsMenu';
 import { Link } from 'react-router-dom';
+import EditCourseDialog from '@/components/EditCourseDialog';
+import { TeacherCourse } from '@/types/course';
+import { deleteApi, getApi } from '@/utils/api';
+import { COURSES_API } from '@/components/api-url';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'react-hot-toast';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [searchAssignments, setSearchAssignments] = useState('');
   const [searchDocuments, setSearchDocuments] = useState('');
+  const [showEditDialog, setShowEditDialog] = useState(false);  
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [course, setCourse] = useState<TeacherCourse | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data cho khóa học
-  const course = {
-    id: parseInt(courseId || '1'),
-    title: 'Lập trình Web cơ bản',
-    description: 'Học HTML, CSS, JavaScript từ cơ bản đến nâng cao',
-    instructor: 'ThS. Nguyễn Văn A',
-    students: 30,
-    lessons: 24,
-    progress: 75,
-    status: 'active',
-    thumbnail: '/placeholder.svg',
-    duration: '12 tuần',
-    startDate: '2025-01-15',
-    endDate: '2025-04-15'
+  const getCourse = async () => {
+    try {
+      const res = await getApi(`${COURSES_API.GET_BY_ID(courseId)}`);
+      console.log('res', res);
+      setCourse(res.data);
+    } catch (error) {
+      console.log('error', error);
+    }
+    finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getCourse();
+  }, []);
+
+  const onSuccess = () => {
+    getCourse();
+  };
+
+  const handleDelete = async () => {
+    if (!course?.id) {
+      toast.error('Không tìm thấy thông tin khóa học');
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      setError(null);
+      
+      await deleteApi(`${COURSES_API.DELETE(course.id)}`);
+      
+      toast.success('Xóa khóa học thành công');
+      onSuccess();
+      navigate('/dashboard/courses');
+    } catch (err) {
+      console.error('Error deleting course:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Không thể xóa khóa học. Vui lòng thử lại sau.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
 
   // Mock data cho bài tập của khóa học
@@ -52,7 +96,7 @@ const CourseDetail = () => {
       id: 1,
       title: 'Bài tập HTML cơ bản',
       description: 'Tạo trang web đơn giản với HTML',
-      course: course.title,
+      course: "ReactJS Mastery",
       dueDate: '2025-04-15',
       maxGrade: 10,
       submissions: 25,
@@ -62,7 +106,7 @@ const CourseDetail = () => {
       id: 2,
       title: 'Thực hành CSS Flexbox',
       description: 'Xây dựng layout responsive với Flexbox',
-      course: course.title,
+      course: "ReactJS Mastery",
       dueDate: '2025-04-20',
       maxGrade: 10,
       submissions: 18,
@@ -72,7 +116,7 @@ const CourseDetail = () => {
       id: 3,
       title: 'Dự án JavaScript',
       description: 'Tạo ứng dụng web tương tác với JavaScript',
-      course: course.title,
+      course: "ReactJS Mastery",
       dueDate: '2025-04-25',
       maxGrade: 15,
       submissions: 0,
@@ -87,7 +131,7 @@ const CourseDetail = () => {
       title: 'Giáo trình HTML cơ bản',
       description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
       category: 'Giáo trình',
-      course: course.title,
+      course: "ReactJS Mastery",
       type: 'pdf',
       size: '2.5 MB',
       downloads: 245,
@@ -98,7 +142,7 @@ const CourseDetail = () => {
       title: 'Video bài giảng CSS',
       description: 'Video hướng dẫn CSS cho người mới bắt đầu',
       category: 'Video bài giảng',
-      course: course.title,
+      course: "ReactJS Mastery",
       type: 'video',
       size: '125 MB',
       downloads: 189,
@@ -109,7 +153,7 @@ const CourseDetail = () => {
       title: 'Slide JavaScript ES6',
       description: 'Slide trình bày về JavaScript ES6+',
       category: 'Slide',
-      course: course.title,
+      course: "ReactJS Mastery",
       type: 'pptx',
       size: '8.2 MB',
       downloads: 167,
@@ -174,22 +218,67 @@ const CourseDetail = () => {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900">{course.title}</h1>
-            <p className="text-gray-600 mt-1">{course.description}</p>
+            <h1 className="text-3xl font-bold text-gray-900">{course?.title}</h1>
+            <p className="text-gray-600 mt-1">{course?.description}</p>
           </div>
           {user?.role === 'teacher' && (
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Chỉnh sửa
               </Button>
-              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-red-600 hover:text-red-700"
+                onClick={() => setShowDeleteDialog(true)}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Xóa khóa học
               </Button>
             </div>
           )}
         </div>
+
+        <EditCourseDialog
+          course={course as TeacherCourse}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          onSuccess={onSuccess}
+        />
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận xóa khóa học</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn xóa khóa học này? Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {error && (
+              <div className="text-red-500 text-sm mt-2">
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={isDeleting}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Đang xóa...' : 'Xóa khóa học'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Course Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -198,7 +287,7 @@ const CourseDetail = () => {
               <div className="flex items-center space-x-2">
                 <Users className="h-8 w-8 text-blue-600" />
                 <div>
-                  <p className="text-2xl font-bold">{course.students}</p>
+                  <p className="text-2xl font-bold">{course?.students_count}</p>
                   <p className="text-sm text-gray-600">Học sinh</p>
                 </div>
               </div>
@@ -209,7 +298,7 @@ const CourseDetail = () => {
               <div className="flex items-center space-x-2">
                 <BookOpen className="h-8 w-8 text-green-600" />
                 <div>
-                  <p className="text-2xl font-bold">{course.lessons}</p>
+                  <p className="text-2xl font-bold">{course?.lessons_count}</p>
                   <p className="text-sm text-gray-600">Bài học</p>
                 </div>
               </div>
@@ -220,7 +309,7 @@ const CourseDetail = () => {
               <div className="flex items-center space-x-2">
                 <Clock className="h-8 w-8 text-purple-600" />
                 <div>
-                  <p className="text-2xl font-bold">{course.duration}</p>
+                  <p className="text-2xl font-bold">{course?.duration}</p>
                   <p className="text-sm text-gray-600">Thời lượng</p>
                 </div>
               </div>
@@ -230,7 +319,8 @@ const CourseDetail = () => {
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-green-600 font-bold">{course.progress}%</span>
+                <span className="text-green-600 font-bold">80%</span>
+                  {/* <span className="text-green-600 font-bold">{course.progress_count}%</span> */}
                 </div>
                 <div>
                   <p className="text-2xl font-bold">Tiến độ</p>
@@ -311,7 +401,8 @@ const CourseDetail = () => {
                               </div>
                             </TableCell>
                             <TableCell>{assignment.maxGrade} điểm</TableCell>
-                            <TableCell>{assignment.submissions}/{course.students}</TableCell>
+                            <TableCell>25/30</TableCell>
+                              {/* <TableCell>{assignment.submissions}/{course.students_count}</TableCell> */}
                             <TableCell>{getStatusBadge(assignment.status)}</TableCell>
                             <TableCell>
                               <AssignmentActionsMenu assignment={assignment} />
