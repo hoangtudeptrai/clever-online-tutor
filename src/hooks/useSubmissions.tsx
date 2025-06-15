@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +13,7 @@ export interface Submission {
   submitted_at?: string;
   grade?: number;
   feedback?: string;
+  graded_at?: string;
 }
 
 export const useCreateSubmission = () => {
@@ -113,7 +115,8 @@ export const useGradeSubmission = () => {
         .update({
           grade,
           feedback,
-          status: 'graded'
+          status: 'graded',
+          graded_at: new Date().toISOString(),
         })
         .eq('id', submissionId)
         .select()

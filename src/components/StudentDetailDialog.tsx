@@ -11,10 +11,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Student } from '@/hooks/useStudents';
+import { Student, CourseStudent } from '@/hooks/useStudents';
 
 interface StudentDetailDialogProps {
-  student: Student | null;
+  student: Student | CourseStudent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -30,6 +30,13 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
+
+  // Check if this is a CourseStudent (has course-specific data)
+  const isCourseStudent = (student: Student | CourseStudent): student is CourseStudent => {
+    return 'enrollment_id' in student;
+  };
+
+  const courseStudentData = isCourseStudent(student) ? student : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,6 +63,13 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                   <CardTitle className="text-xl">{student.full_name}</CardTitle>
                   <div className="flex items-center space-x-2 mt-2">
                     <Badge className="bg-green-100 text-green-800">Đang hoạt động</Badge>
+                    {courseStudentData && (
+                      <Badge className="bg-blue-100 text-blue-800">
+                        {courseStudentData.status === 'enrolled' ? 'Đang học' : 
+                         courseStudentData.status === 'completed' ? 'Hoàn thành' : 
+                         courseStudentData.status === 'dropped' ? 'Đã nghỉ' : courseStudentData.status}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -74,15 +88,46 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 )}
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">Tham gia: {formatDate(student.created_at)}</span>
+                  <span className="text-sm">
+                    Tham gia: {formatDate(courseStudentData?.enrolled_at || student.created_at)}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-gray-400" />
                   <span className="text-sm">ID: {student.id.slice(0, 8)}...</span>
                 </div>
+                {courseStudentData?.last_active && (
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm">Hoạt động cuối: {formatDate(courseStudentData.last_active)}</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Course Progress (only for CourseStudent) */}
+          {courseStudentData && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Tiến độ khóa học</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Tiến độ hoàn thành</span>
+                    <span className="text-sm text-gray-600">{courseStudentData.progress || 0}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="bg-blue-600 h-3 rounded-full transition-all duration-300" 
+                      style={{ width: `${courseStudentData.progress || 0}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Learning Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -102,7 +147,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="h-8 w-8 text-green-600" />
                   <div>
-                    <p className="text-2xl font-bold">85%</p>
+                    <p className="text-2xl font-bold">{courseStudentData?.progress || 85}%</p>
                     <p className="text-sm text-gray-600">Tiến độ TB</p>
                   </div>
                 </div>
@@ -137,10 +182,16 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium">Tham gia khóa học: React Nâng cao</p>
-                    <p className="text-sm text-gray-600">1 tuần trước</p>
+                    <p className="font-medium">
+                      {courseStudentData ? `Tham gia khóa học` : 'Tham gia khóa học: React Nâng cao'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {courseStudentData ? formatDate(courseStudentData.enrolled_at) : '1 tuần trước'}
+                    </p>
                   </div>
-                  <Badge className="bg-blue-100 text-blue-800">Mới</Badge>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {courseStudentData ? 'Đang học' : 'Mới'}
+                  </Badge>
                 </div>
               </div>
             </CardContent>

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -215,8 +216,13 @@ export const useCreateAssignment = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate multiple related queries
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['course-assignments', data.course_id] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['course', data.course_id] });
+      
       toast({
         title: "Thành công",
         description: "Đã tạo bài tập mới thành công",
@@ -258,8 +264,14 @@ export const useUpdateAssignment = () => {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate multiple related queries
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['course-assignments', data.course_id] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['course', data.course_id] });
+      
       toast({
         title: "Thành công",
         description: "Đã cập nhật bài tập thành công",

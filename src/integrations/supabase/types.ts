@@ -103,6 +103,7 @@ export type Database = {
           content: string | null
           feedback: string | null
           grade: number | null
+          graded_at: string | null
           id: string
           status: Database["public"]["Enums"]["submission_status"] | null
           student_id: string
@@ -113,6 +114,7 @@ export type Database = {
           content?: string | null
           feedback?: string | null
           grade?: number | null
+          graded_at?: string | null
           id?: string
           status?: Database["public"]["Enums"]["submission_status"] | null
           student_id: string
@@ -123,6 +125,7 @@ export type Database = {
           content?: string | null
           feedback?: string | null
           grade?: number | null
+          graded_at?: string | null
           id?: string
           status?: Database["public"]["Enums"]["submission_status"] | null
           student_id?: string
@@ -594,7 +597,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_access_submission: {
+        Args: { p_submission_id: string }
+        Returns: boolean
+      }
+      can_view_notification: {
+        Args: { p_notification_id: string }
+        Returns: boolean
+      }
+      is_assignment_tutor: {
+        Args: { p_assignment_id: string }
+        Returns: boolean
+      }
+      is_submission_owner: {
+        Args: { p_submission_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       assignment_status: "draft" | "published" | "archived"

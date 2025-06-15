@@ -13,11 +13,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import DashboardLayout from '@/components/DashboardLayout';
-import { useStudents } from '@/hooks/useStudents';
+import StudentDetailDialog from '@/components/StudentDetailDialog';
+import { useStudents, type Student } from '@/hooks/useStudents';
 import { useAuth } from '@/hooks/useAuth';
 
 const Students = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
   const { profile } = useAuth();
   const { data: students = [], isLoading } = useStudents();
 
@@ -36,6 +39,11 @@ const Students = () => {
     student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleViewStudentDetail = (student: Student) => {
+    setSelectedStudent(student);
+    setShowDetailDialog(true);
+  };
 
   if (!profile || profile.role !== 'tutor') {
     return (
@@ -138,7 +146,7 @@ const Students = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
                       <Avatar>
-                        <AvatarImage src="" alt={student.full_name} />
+                        <AvatarImage src={student.avatar_url || ""} alt={student.full_name} />
                         <AvatarFallback>{student.full_name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -155,7 +163,7 @@ const Students = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewStudentDetail(student)}>
                             <Eye className="h-4 w-4 mr-2" />
                             Xem chi tiết
                           </DropdownMenuItem>
@@ -198,7 +206,12 @@ const Students = () => {
                     </div>
 
                     <div className="pt-2">
-                      <Button variant="outline" size="sm" className="w-full">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => handleViewStudentDetail(student)}
+                      >
                         Xem chi tiết
                       </Button>
                     </div>
@@ -212,6 +225,13 @@ const Students = () => {
             {searchTerm ? 'Không tìm thấy học sinh nào' : 'Chưa có học sinh nào trong hệ thống'}
           </div>
         )}
+
+        {/* Student Detail Dialog */}
+        <StudentDetailDialog
+          student={selectedStudent}
+          open={showDetailDialog}
+          onOpenChange={setShowDetailDialog}
+        />
       </div>
     </DashboardLayout>
   );

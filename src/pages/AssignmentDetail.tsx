@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, FileText, Calendar, Clock, Edit, Trash2, Save, Eye, Send } from 'lucide-react';
@@ -45,6 +44,20 @@ import { useGradeSubmission } from '@/hooks/useSubmissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+// Define a more specific type for submissions within this component
+// to include graded_at, as it seems the hook's type is out of date.
+interface AssignmentSubmission {
+  id: string;
+  status: string;
+  submitted_at: string;
+  grade?: number | null;
+  feedback?: string | null;
+  graded_at?: string | null;
+  student?: {
+    full_name: string;
+  };
+}
+
 const AssignmentDetail = () => {
   const { assignmentId } = useParams();
   const { profile } = useAuth();
@@ -82,7 +95,7 @@ const AssignmentDetail = () => {
     );
   }
 
-  const submissions = assignment.submissions || [];
+  const submissions = (assignment.submissions || []) as AssignmentSubmission[];
   const submittedCount = submissions.filter(s => s.status === 'submitted' || s.status === 'graded').length;
   const gradedCount = submissions.filter(s => s.grade !== null && s.grade !== undefined).length;
 
@@ -320,9 +333,16 @@ const AssignmentDetail = () => {
                           Nộp lúc: {userSubmission.submitted_at ? formatDate(userSubmission.submitted_at) : 'N/A'}
                         </p>
                         {userSubmission.grade !== null && (
-                          <p className="text-sm font-medium text-green-600">
-                            Điểm: {userSubmission.grade}/{assignment.max_score || 100}
-                          </p>
+                          <>
+                            <p className="text-sm font-medium text-green-600">
+                              Điểm: {userSubmission.grade}/{assignment.max_score || 100}
+                            </p>
+                            {userSubmission.graded_at && (
+                               <p className="text-sm text-gray-600">
+                                Chấm lúc: {formatDate(userSubmission.graded_at)}
+                              </p>
+                            )}
+                          </>
                         )}
                         {userSubmission.feedback && (
                           <div>
@@ -330,6 +350,12 @@ const AssignmentDetail = () => {
                             <p className="text-sm mt-1">{userSubmission.feedback}</p>
                           </div>
                         )}
+                        <div className="pt-2">
+                          <Button variant="outline" size="sm" onClick={() => handleViewSubmission(userSubmission)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Xem chi tiết bài nộp
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div className="mt-2">

@@ -29,14 +29,14 @@ export const useSubmissionFiles = (submissionId?: string) => {
 
       // Get public URLs for each file
       const filesWithUrls = (data || []).map((file) => {
-        const { data: publicUrl } = supabase
+        const { data: publicUrlData } = supabase
           .storage
           .from('assignment-files')
           .getPublicUrl(file.file_path);
 
         return {
           ...file,
-          file_url: publicUrl?.publicUrl
+          file_url: publicUrlData?.publicUrl
         };
       });
 
@@ -48,21 +48,10 @@ export const useSubmissionFiles = (submissionId?: string) => {
 
 export const downloadSubmissionFile = async (file: SubmissionFile) => {
   try {
-    const { data, error } = await supabase.storage
-      .from('assignment-files')
-      .download(file.file_path);
-
-    if (error) throw error;
-
-    // Create a download link
-    const url = window.URL.createObjectURL(data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', file.file_name);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    if (!file.file_url) {
+      throw new Error("Public URL for file not found.");
+    }
+    window.open(file.file_url, '_blank');
   } catch (error) {
     console.error('Error downloading file:', error);
     throw error;

@@ -30,7 +30,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import ManageStudentsDialog from './ManageStudentsDialog';
-import { useCourseStudents, useUnenrollStudent } from '@/hooks/useStudents';
+import StudentDetailDialog from './StudentDetailDialog';
+import { useCourseStudents, useUnenrollStudent, type CourseStudent } from '@/hooks/useStudents';
 import { useToast } from '@/hooks/use-toast';
 import { useCourses } from '@/hooks/useCourses';
 
@@ -38,20 +39,22 @@ const StudentsManagement = () => {
   const { courseId } = useParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<CourseStudent | null>(null);
   const [showUnenrollDialog, setShowUnenrollDialog] = useState(false);
   const [showManageDialog, setShowManageDialog] = useState(false);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
   const { toast } = useToast();
 
-  const { data: students, isLoading } = useCourseStudents(courseId || '');
+  const { data: students = [], isLoading, error } = useCourseStudents(courseId || '');
   const { data: courses } = useCourses();
   const unenrollStudent = useUnenrollStudent();
 
   const currentCourse = courses?.find(course => course.id === courseId);
 
-  const filteredStudents = students?.filter(student =>
-    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredStudents = students.filter(student =>
+    student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleUnenrollStudent = async () => {
     if (!selectedStudent || !courseId) return;
@@ -62,20 +65,16 @@ const StudentsManagement = () => {
         studentId: selectedStudent
       });
       
-      toast({
-        title: "Thành công",
-        description: "Đã hủy đăng ký học sinh khỏi khóa học",
-      });
-      
       setShowUnenrollDialog(false);
       setSelectedStudent(null);
     } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể hủy đăng ký học sinh",
-        variant: "destructive",
-      });
+      console.error('Error unenrolling student:', error);
     }
+  };
+
+  const handleViewStudentDetail = (student: CourseStudent) => {
+    setSelectedStudentForDetail(student);
+    setShowDetailDialog(true);
   };
 
   const getStatusBadge = (status?: string) => {
@@ -105,6 +104,18 @@ const StudentsManagement = () => {
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-600">
+            Có lỗi xảy ra khi tải danh sách học sinh. Vui lòng thử lại.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -120,7 +131,7 @@ const StudentsManagement = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Quản lý học sinh ({students?.length || 0})</CardTitle>
+            <CardTitle>Quản lý học sinh ({students.length || 0})</CardTitle>
             <Button onClick={() => setShowManageDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Quản lý học sinh
@@ -157,8 +168,8 @@ const StudentsManagement = () => {
               <TableBody>
                 {filteredStudents.map((student) => (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.full_name}</TableCell>
-                    <TableCell>{student.email}</TableCell>
+                    <TableCell className="font-medium">{student.full_name || 'N/A'}</TableCell>
+                    <TableCell>{student.email || 'N/A'}</TableCell>
                     <TableCell>{formatDate(student.enrolled_at)}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -180,7 +191,7 @@ const StudentsManagement = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewStudentDetail(student)}>
                             <Eye className="h-4 w-4 mr-2" />
                             Xem chi tiết
                           </DropdownMenuItem>
@@ -214,11 +225,20 @@ const StudentsManagement = () => {
       </Card>
 
       {/* Manage Students Dialog */}
-      <ManageStudentsDialog
-        courseId={courseId || ''}
-        courseTitle={currentCourse?.title || 'Khóa học'}
-        open={showManageDialog}
-        onOpenChange={setShowManageDialog}
+      {courseId && (
+        <ManageStudentsDialog
+          courseId={courseId}
+          courseTitle={currentCourse?.title || 'Khóa học'}
+          open={showManageDialog}
+          onOpenChange={setShowManageDialog}
+        />
+      )}
+
+      {/* Student Detail Dialog */}
+      <StudentDetailDialog
+        student={selectedStudentForDetail}
+        open={showDetailDialog}
+        onOpenChange={setShowDetailDialog}
       />
 
       {/* Unenroll Confirmation Dialog */}
@@ -236,8 +256,9 @@ const StudentsManagement = () => {
             <AlertDialogAction 
               onClick={handleUnenrollStudent}
               className="bg-red-600 hover:bg-red-700"
+              disabled={unenrollStudent.isPending}
             >
-              Xác nhận hủy đăng ký
+              {unenrollStudent.isPending ? 'Đang xử lý...' : 'Xác nhận hủy đăng ký'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { FileText, Download, Calendar, User, Loader2, Image, Archive } from 'lucide-react';
 import {
@@ -143,6 +144,12 @@ const SubmissionDetailDialog: React.FC<SubmissionDetailDialogProps> = ({
                         {submission.grade}/{assignment.max_score || 100}
                       </p>
                     </div>
+                    {submission.graded_at && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Ngày chấm</Label>
+                        <p className="text-sm">{formatDate(submission.graded_at)}</p>
+                      </div>
+                    )}
                     {submission.feedback && (
                       <div>
                         <Label className="text-sm font-medium text-gray-600">Nhận xét</Label>

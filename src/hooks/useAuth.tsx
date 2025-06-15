@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -174,14 +175,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('message-files')
+      // First, try to upload to avatars bucket, if it doesn't exist, try message-files
+      let uploadError: any = null;
+      let bucketName = 'avatars';
+      
+      const { error: uploadToAvatars } = await supabase.storage
+        .from('avatars')
         .upload(filePath, file);
+
+      if (uploadToAvatars) {
+        // If avatars bucket doesn't exist, fallback to message-files bucket
+        bucketName = 'message-files';
+        const { error: uploadToFiles } = await supabase.storage
+          .from('message-files')
+          .upload(filePath, file);
+        uploadError = uploadToFiles;
+      }
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('message-files')
+        .from(bucketName)
         .getPublicUrl(filePath);
 
       const { error: updateError } = await updateProfile({ avatar_url: publicUrl });

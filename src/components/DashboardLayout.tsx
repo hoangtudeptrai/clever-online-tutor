@@ -19,10 +19,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import MessagesDropdown from '@/components/MessagesDropdown';
+import AvatarUpload from '@/components/AvatarUpload';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -72,7 +73,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -84,29 +85,32 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               >
                 <Menu className="h-6 w-6" />
               </Button>
-              <Link to="/dashboard" className="flex items-center space-x-2 ml-4 lg:ml-0">
+              <Link to="/dashboard" className="flex items-center space-x-3 ml-4 lg:ml-0">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-2 rounded-lg">
                   <BookOpen className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-gray-800">EduManage</h1>
-                  <p className="text-xs text-gray-600">ĐHGTVT - CNTT</p>
+                  <p className="text-xs text-gray-600 hidden sm:block">ĐHGTVT - CNTT</p>
                 </div>
               </Link>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <NotificationDropdown unreadCount={unreadCounts?.notifications || 0} />
               <MessagesDropdown unreadCount={unreadCounts?.messages || 0} />
-              <div className="flex items-center space-x-3">
-                <Avatar>
-                  <AvatarImage src={profile?.avatar_url} alt={profile?.full_name} />
-                  <AvatarFallback>
-                    {profile?.full_name?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+              
+              <div className="flex items-center space-x-3 pl-3 border-l border-gray-200">
+                <AvatarUpload
+                  currentAvatarUrl={profile?.avatar_url}
+                  userName={profile?.full_name || 'User'}
+                  size="sm"
+                  showUploadButton={false}
+                />
                 <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate max-w-32">
+                    {profile?.full_name}
+                  </p>
                   <p className="text-xs text-gray-600">
                     {profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}
                   </p>
@@ -133,30 +137,30 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </Button>
           </div>
           
-          <nav className="mt-8 lg:mt-4">
-            <div className="px-4 mb-4">
+          <nav className="mt-6 lg:mt-4 h-full overflow-y-auto pb-20">
+            <div className="px-4 mb-6">
               <div className="flex items-center space-x-2 text-xs text-gray-500 uppercase tracking-wider">
                 {profile?.role === 'tutor' ? <GraduationCap className="h-4 w-4" /> : <User className="h-4 w-4" />}
                 <span>{profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}</span>
               </div>
             </div>
             
-            <ul className="space-y-1 px-2">
+            <ul className="space-y-1 px-3">
               {menuItems.map((item) => (
                 <li key={item.path}>
                   <Link
                     to={item.path}
                     className={`
-                      flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors
+                      flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200
                       ${isActiveRoute(item.path)
-                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                        ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-700 shadow-sm'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                       }
                     `}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.label}</span>
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">{item.label}</span>
                   </Link>
                 </li>
               ))}
@@ -173,8 +177,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         )}
 
         {/* Main content */}
-        <main className="flex-1 lg:ml-0">
-          <div className="p-6">
+        <main className="flex-1 lg:ml-0 min-h-screen">
+          <div className="p-4 sm:p-6 lg:p-8">
             {children}
           </div>
         </main>

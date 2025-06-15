@@ -1,24 +1,19 @@
+
 import React from 'react';
-import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Plus, Bell } from 'lucide-react';
+import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { useStats } from '@/hooks/useStats';
 import DashboardLayout from '@/components/DashboardLayout';
-import CreateCourseDialog from '@/components/CreateCourseDialog';
-import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
-import CreateDocumentDialog from '@/components/CreateDocumentDialog';
 import RecentActivities from '@/components/RecentActivities';
 import StudentActivities from '@/components/StudentActivities';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 
 const Dashboard = () => {
   const { profile } = useAuth();
   const { data: stats, isLoading: statsLoading } = useStats();
-  const { data: unreadCounts, isLoading: isLoadingCounts } = useUnreadCounts();
 
   const getTeacherStats = () => {
     if (!stats) return [];
@@ -99,14 +94,6 @@ const Dashboard = () => {
   };
 
   const displayStats = profile?.role === 'tutor' ? getTeacherStats() : getStudentStats();
-
-  if (isLoadingCounts) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
 
   return (
     <DashboardLayout>
