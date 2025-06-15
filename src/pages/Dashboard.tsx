@@ -217,36 +217,41 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Học sinh */}
-              <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-2 rounded-lg bg-purple-50">
-                      <Users className="h-5 w-5 text-purple-600" />
+              {/* Chỉ hiển thị card "Học sinh" cho giáo viên */}
+              {profile?.role === 'tutor' && (
+                <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="p-2 rounded-lg bg-purple-50">
+                        <Users className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-semibold">Học sinh</CardTitle>
+                        <CardDescription className="text-sm">Quản lý và theo dõi học sinh</CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-lg font-semibold">Học sinh</CardTitle>
-                      <CardDescription className="text-sm">Quản lý và theo dõi học sinh</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Link to="/dashboard/students" className="block">
+                        <Button className="w-full justify-start" variant="outline">
+                          <Users className="h-4 w-4 mr-2" />
+                          Danh sách học sinh
+                        </Button>
+                      </Link>
+                      {/* Chỉ giáo viên thấy nút xem điểm số */}
+                      <Link to="/dashboard/grades" className="block">
+                        <Button className="w-full justify-start" variant="outline" disabled>
+                          <TrendingUp className="h-4 w-4 mr-2" />
+                          Xem điểm số
+                        </Button>
+                      </Link>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Link to="/dashboard/students" className="block">
-                      <Button className="w-full justify-start" variant="outline">
-                        <Users className="h-4 w-4 mr-2" />
-                        Danh sách học sinh
-                      </Button>
-                    </Link>
-                    <Link to="/dashboard/grades" className="block">
-                      <Button className="w-full justify-start" variant="outline">
-                        <TrendingUp className="h-4 w-4 mr-2" />
-                        Xem điểm số
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Học sinh sẽ không thấy card này nữa */}
             </div>
           </div>
         </div>
@@ -270,5 +275,5 @@ const Dashboard = () => {
     </DashboardLayout>
   );
 };
-
 export default Dashboard;
+
