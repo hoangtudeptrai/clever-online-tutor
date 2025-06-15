@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Search, Plus, FileText, User, Book, Eye } from 'lucide-react';
@@ -156,7 +157,16 @@ const Assignments = () => {
                         {getStatusBadge(assignment.assignment_status || 'draft')}
                       </TableCell>
                       <TableCell className="text-right">
-                        {profile?.role === 'tutor' && <AssignmentActionsMenu assignment={assignment} />}
+                        {profile?.role === 'tutor' ? (
+                          <AssignmentActionsMenu assignment={assignment} />
+                        ) : (
+                          <Link to={`/dashboard/assignments/${assignment.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-2" />
+                              Xem chi tiết
+                            </Button>
+                          </Link>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -179,3 +189,4 @@ const Assignments = () => {
 };
 
 export default Assignments;
+
