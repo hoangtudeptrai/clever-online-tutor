@@ -38,7 +38,6 @@ const CourseDetail = () => {
 
   // Fetch real data from database
   const { data: courses } = useCourses();
-  const { data: assignments } = useAssignments();
   const { data: courseAssignments, isLoading: assignmentsLoading } = useCourseAssignments(courseId || '');
   const { data: documents } = useDocuments();
   const { data: courseStudents } = useCourseStudents(courseId || '');
@@ -55,12 +54,12 @@ const CourseDetail = () => {
   const lessonsCount = course?.lessons_count || 0;
   const avgProgress = courseStudents?.reduce((acc, student) => acc + (student.progress || 0), 0) / (studentsCount || 1) || 0;
 
-  // Loading state
+  // Loading state (nên check cả assignments và students)
   if (assignmentsLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">Đang tải...</p>
+          <p className="text-gray-500">Đang tải dữ liệu bài tập...</p>
         </div>
       </DashboardLayout>
     );
@@ -113,12 +112,16 @@ const CourseDetail = () => {
     }
   };
 
-  const filteredAssignments = courseAssignments?.filter(assignment =>
+  // Filtered for this course only
+  const filteredAssignments = (courseAssignments || []).filter(assignment =>
     assignment.title.toLowerCase().includes(searchAssignments.toLowerCase()) ||
     (assignment.description && assignment.description.toLowerCase().includes(searchAssignments.toLowerCase()))
-  ) || [];
+  );
 
-  const filteredDocuments = documents?.filter(d => d.course_id === courseId) || [];
+  const filteredDocuments = courseDocuments.filter(document =>
+    document.title.toLowerCase().includes(searchDocuments.toLowerCase()) ||
+    (document.description && document.description.toLowerCase().includes(searchDocuments.toLowerCase()))
+  );
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'N/A';
@@ -393,7 +396,7 @@ const CourseDetail = () => {
             <TabsContent value="assignments" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Bài tập của khóa học ({courseAssignments.filter(a => a.assignment_status === 'published').length})</CardTitle>
+                  <CardTitle>Bài tập của khóa học ({courseAssignments?.filter(a => a.assignment_status === 'published').length})</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Search */}
@@ -406,7 +409,7 @@ const CourseDetail = () => {
 
                   {/* Assignments Grid for Students */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredAssignments.filter(a => a.assignment_status === 'published').map((assignment) => (
+                    {(filteredAssignments.filter(a => a.assignment_status === 'published')).map((assignment) => (
                       <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
                         <CardHeader>
                           <div className="flex items-start justify-between">
