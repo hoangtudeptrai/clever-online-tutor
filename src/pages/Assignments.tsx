@@ -12,6 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import DashboardLayout from '@/components/DashboardLayout';
 import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
 import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
@@ -113,85 +121,58 @@ const Assignments = () => {
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAssignments?.map((assignment) => (
-            <Card key={assignment.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-1.5">
-                    <Link 
-                      to={`/dashboard/assignments/${assignment.id}`}
-                      className="hover:underline"
-                    >
-                      <CardTitle>{assignment.title}</CardTitle>
-                    </Link>
-                    <CardDescription className="line-clamp-2">
-                      {assignment.description || 'Không có mô tả'}
-                    </CardDescription>
-                  </div>
-                  <AssignmentActionsMenu assignment={assignment} />
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Link 
-                        to={`/dashboard/courses/${assignment.course_id}`}
-                        className="flex items-center gap-2 hover:text-blue-600 transition-colors"
-                      >
-                        <Book className="h-4 w-4" />
-                        <span>Khóa học:</span>
-                        <span className="font-medium">{assignment.course?.title}</span>
-                      </Link>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <User className="h-4 w-4" />
-                      <span>Người tạo:</span>
-                      <span className="font-medium">{assignment.creator?.full_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>Hạn nộp:</span>
-                      <span className="font-medium">
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">Tiêu đề</TableHead>
+                  <TableHead>Khóa học</TableHead>
+                  <TableHead>Hạn nộp</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className="text-right">Hành động</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAssignments && filteredAssignments.length > 0 ? (
+                  filteredAssignments.map((assignment) => (
+                    <TableRow key={assignment.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          to={`/dashboard/assignments/${assignment.id}`}
+                          className="hover:underline"
+                        >
+                          {assignment.title}
+                        </Link>
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {assignment.description || 'Không có mô tả'}
+                        </p>
+                      </TableCell>
+                      <TableCell>{assignment.course?.title || 'N/A'}</TableCell>
+                      <TableCell>
                         {assignment.due_date ? formatDate(assignment.due_date) : 'Không có'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <FileText className="h-4 w-4" />
-                      <span>Điểm tối đa:</span>
-                      <span className="font-medium">{assignment.max_score || 100} điểm</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="h-4 w-4" />
-                      <span>Ngày tạo:</span>
-                      <span className="font-medium">{formatDate(assignment.created_at)}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex items-center justify-between pt-4">
-                {getStatusBadge(assignment.assignment_status || 'draft')}
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/dashboard/assignments/${assignment.id}`}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Xem chi tiết
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-
-        {filteredAssignments?.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-500">
-              {searchQuery
-                ? 'Không tìm thấy bài tập nào phù hợp'
-                : 'Chưa có bài tập nào'}
-            </div>
-          </div>
-        )}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(assignment.assignment_status || 'draft')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {profile?.role === 'tutor' && <AssignmentActionsMenu assignment={assignment} />}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      {searchQuery
+                        ? 'Không tìm thấy bài tập nào phù hợp.'
+                        : 'Chưa có bài tập nào.'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
