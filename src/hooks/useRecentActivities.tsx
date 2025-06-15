@@ -12,6 +12,7 @@ export interface RecentActivity {
   created_at: string;
   status?: string;
   grade?: number;
+  assignment_id?: string;
 }
 
 export const useRecentActivities = () => {
@@ -33,6 +34,7 @@ export const useRecentActivities = () => {
             grade,
             student_id,
             assignment:assignments!inner(
+              id,
               title,
               course_id,
               created_by,
@@ -73,7 +75,8 @@ export const useRecentActivities = () => {
           assignment_title: submission.assignment?.title || 'Unknown Assignment',
           created_at: submission.submitted_at || new Date().toISOString(),
           status: submission.status,
-          grade: submission.grade
+          grade: submission.grade,
+          assignment_id: submission.assignment?.id
         }));
 
         return activities;

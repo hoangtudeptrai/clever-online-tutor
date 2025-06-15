@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, ArrowRight, Trophy } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -254,12 +253,16 @@ const Dashboard = () => {
                     ) : (
                       <div className="space-y-3">
                         {assignmentsToGrade.slice(0, 3).map(activity => (
-                          <div key={activity.id} className="p-3 rounded-lg border">
+                          <Link 
+                            to={`/dashboard/assignments/${activity.assignment_id}`} 
+                            key={activity.id}
+                            className="block p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+                          >
                             <p className="font-semibold text-sm truncate">{activity.assignment_title}</p>
                             <p className="text-xs text-gray-500">
                               {activity.student_name} đã nộp
                             </p>
-                          </div>
+                          </Link>
                         ))}
                          {assignmentsToGrade.length > 3 && (
                           <Link to="/dashboard/assignments" className="block mt-4">
