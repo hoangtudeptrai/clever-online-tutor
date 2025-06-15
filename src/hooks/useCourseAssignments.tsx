@@ -9,26 +9,45 @@ export const useCourseAssignments = (courseId: string) => {
       if (!courseId) return [];
 
       try {
-        const { data, error } = await supabase
+        // Step 1: Fetch assignments for the course
+        const { data: assignments, error: assignmentsError } = await supabase
           .from('assignments')
-          .select(`
-            *,
-            creator:profiles!assignments_created_by_fkey(id, full_name)
-          `)
+          .select('*')
           .eq('course_id', courseId)
           .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching course assignments:', error);
-          throw error;
+        if (assignmentsError) {
+          console.error('Error fetching course assignments:', assignmentsError);
+          throw assignmentsError;
         }
 
-        // Transform the data to ensure creator is a single object, not an array
-        const transformedData = (data || []).map(assignment => ({
+        if (!assignments || assignments.length === 0) {
+          return [];
+        }
+
+        // Step 2: Fetch creator profiles for these assignments
+        const creatorIds = [...new Set(assignments.map(a => a.created_by).filter(id => !!id))];
+        if (creatorIds.length === 0) {
+          return assignments.map(assignment => ({...assignment, creator: null}));
+        }
+
+        const { data: creators, error: creatorsError } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', creatorIds);
+
+        if (creatorsError) {
+          console.error('Error fetching creators for assignments:', creatorsError);
+          // Return assignments without creator info if creators fetch fails
+          return assignments.map(assignment => ({...assignment, creator: null}));
+        }
+        
+        const creatorsMap = new Map((creators || []).map(c => [c.id, c]));
+        
+        // Step 3: Combine assignments with creator data
+        const transformedData = assignments.map(assignment => ({
           ...assignment,
-          creator: Array.isArray(assignment.creator) 
-            ? assignment.creator[0] || null 
-            : assignment.creator
+          creator: creatorsMap.get(assignment.created_by) || null
         }));
 
         return transformedData;
