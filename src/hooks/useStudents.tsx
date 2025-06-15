@@ -13,6 +13,9 @@ export interface Student {
   phone_number?: string;
   avatar_url?: string;
   created_at?: string;
+  bio?: string;
+  address?: string;
+  education?: string;
 }
 
 export interface CourseStudent extends Student {
@@ -273,5 +276,35 @@ export const useUpdateStudentProgress = () => {
         variant: "destructive",
       });
     },
+  });
+};
+
+export const useStudentProfile = (studentId: string) => {
+  return useQuery({
+    queryKey: ['student-profile', studentId],
+    queryFn: async () => {
+      if (!studentId) return null;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, phone_number, avatar_url, created_at, bio, address, education')
+          .eq('id', studentId)
+          .single();
+
+        if (error) {
+          // It's okay if no profile is found, maybeSingle would be better but this works
+          if (error.code !== 'PGRST116') {
+             console.error('Error fetching student profile:', error);
+             throw error;
+          }
+        }
+        return data as Student | null;
+      } catch (error) {
+        console.error('Error in useStudentProfile:', error);
+        throw error;
+      }
+    },
+    enabled: !!studentId,
   });
 };

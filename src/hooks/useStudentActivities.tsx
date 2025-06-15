@@ -16,19 +16,20 @@ export interface StudentActivity {
   status?: string;
 }
 
-export const useStudentActivities = () => {
+export const useStudentActivities = (studentId?: string) => {
   const { profile } = useAuth();
+  const targetStudentId = studentId || profile?.id;
 
   return useQuery({
-    queryKey: ['student-activities', profile?.id],
+    queryKey: ['student-activities', targetStudentId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!targetStudentId) return [];
 
       // Get recent notifications for the student
       const { data: notifications, error: notificationsError } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', profile.id)
+        .eq('user_id', targetStudentId)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -41,7 +42,7 @@ export const useStudentActivities = () => {
           *,
           assignments!inner(title, due_date, course_id, courses!inner(title))
         `)
-        .eq('student_id', profile.id)
+        .eq('student_id', targetStudentId)
         .order('submitted_at', { ascending: false })
         .limit(5);
 
@@ -55,7 +56,7 @@ export const useStudentActivities = () => {
           courses!inner(title),
           course_enrollments!inner(student_id)
         `)
-        .eq('course_enrollments.student_id', profile.id)
+        .eq('course_enrollments.student_id', targetStudentId)
         .gte('due_date', new Date().toISOString())
         .order('due_date', { ascending: true })
         .limit(3);
@@ -115,6 +116,6 @@ export const useStudentActivities = () => {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ).slice(0, 8);
     },
-    enabled: !!profile?.id,
+    enabled: !!targetStudentId,
   });
 };

@@ -15,13 +15,14 @@ export interface StudentGrade {
   status: 'graded' | 'pending' | 'not_submitted';
 }
 
-export const useStudentGrades = () => {
+export const useStudentGrades = (studentId?: string) => {
   const { profile } = useAuth();
+  const targetStudentId = studentId || profile?.id;
 
   return useQuery({
-    queryKey: ['student-grades', profile?.id],
+    queryKey: ['student-grades', targetStudentId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!targetStudentId) return [];
 
       try {
         // Fetch assignments with submissions for the current student
@@ -48,7 +49,7 @@ export const useStudentGrades = () => {
           .from('assignment_submissions')
           .select('*')
           .in('assignment_id', assignmentIds)
-          .eq('student_id', profile.id);
+          .eq('student_id', targetStudentId);
 
         if (submissionsError) throw submissionsError;
 
@@ -90,6 +91,6 @@ export const useStudentGrades = () => {
         throw error;
       }
     },
-    enabled: !!profile?.id,
+    enabled: !!targetStudentId,
   });
 };
