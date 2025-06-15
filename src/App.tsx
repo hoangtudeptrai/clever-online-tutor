@@ -144,7 +144,7 @@ const App = () => (
             <Route 
               path="/dashboard/profile" 
               element={
-                <ProtectedRoute role="student">
+                <ProtectedRoute>
                   <Profile />
                 </ProtectedRoute>
               } 

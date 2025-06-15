@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -45,6 +44,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: MessageCircle, label: 'Tin nhắn', path: '/dashboard/messages' },
     { icon: Award, label: 'Thống kê & báo cáo', path: '/dashboard/reports' },
     { icon: Bell, label: 'Thông báo', path: '/dashboard/notifications' },
+    { icon: User, label: 'Hồ sơ cá nhân', path: '/dashboard/profile' },
     { icon: Settings, label: 'Cài đặt', path: '/dashboard/settings' },
   ];
 
