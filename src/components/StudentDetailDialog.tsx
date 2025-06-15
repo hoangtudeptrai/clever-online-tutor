@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User, Mail, Phone, Calendar, TrendingUp, BookOpen, Award } from 'lucide-react';
 import {
@@ -12,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Student, CourseStudent } from '@/hooks/useStudents';
+import { useCourses } from '@/hooks/useCourses';
+import { useCourseStudents } from '@/hooks/useStudents';
 
 interface StudentDetailDialogProps {
   student: Student | CourseStudent | null;
@@ -24,7 +25,29 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
   open, 
   onOpenChange 
 }) => {
+  // Nếu không có student thì return null
   if (!student) return null;
+
+  // Lấy danh sách các khóa học mà học sinh này đã tham gia
+  const { data: courses } = useCourses();
+  const { data: courseStudents } = useCourseStudents(student.course_id || '');
+  // Tính số khóa học mà học sinh đã tham gia
+  const coursesCount = courseStudents
+    ? courseStudents.filter(cs => cs.id === student.id).length
+    : 1;
+
+  // Tính tiến độ TB
+  const averageProgress = courseStudents && courseStudents.length > 0
+    ? Math.round(
+        courseStudents
+          .filter(cs => cs.id === student.id)
+          .reduce((acc, cs) => acc + (cs.progress || 0), 0) /
+          courseStudents.filter(cs => cs.id === student.id).length
+      )
+    : student.progress || 0;
+
+  // Điểm trung bình (giả định chưa có hệ điểm, đặt mặc định 8.5)
+  const averageScore = 8.5;
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -136,7 +159,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 <div className="flex items-center space-x-2">
                   <BookOpen className="h-8 w-8 text-blue-600" />
                   <div>
-                    <p className="text-2xl font-bold">3</p>
+                    <p className="text-2xl font-bold">{coursesCount}</p>
                     <p className="text-sm text-gray-600">Khóa học</p>
                   </div>
                 </div>
@@ -147,7 +170,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="h-8 w-8 text-green-600" />
                   <div>
-                    <p className="text-2xl font-bold">{courseStudentData?.progress || 85}%</p>
+                    <p className="text-2xl font-bold">{averageProgress}%</p>
                     <p className="text-sm text-gray-600">Tiến độ TB</p>
                   </div>
                 </div>
@@ -158,7 +181,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 <div className="flex items-center space-x-2">
                   <Award className="h-8 w-8 text-purple-600" />
                   <div>
-                    <p className="text-2xl font-bold">8.5</p>
+                    <p className="text-2xl font-bold">{averageScore}</p>
                     <p className="text-sm text-gray-600">Điểm TB</p>
                   </div>
                 </div>

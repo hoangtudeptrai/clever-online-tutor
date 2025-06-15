@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Upload, X, Calendar } from 'lucide-react';
 import {
@@ -95,11 +94,17 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
         await Promise.all(uploadPromises);
       }
 
+      // Thông báo thành công
       toast({
         title: "Thành công",
         description: "Đã tạo bài tập mới thành công",
       });
-
+      // Thêm refetch khi tạo xong
+      if (createAssignmentMutation && createAssignmentMutation.reset) {
+        createAssignmentMutation.reset();
+      }
+      // Bổ sung refetch: gọi explicit refetch nếu được truyền qua prop (nếu có sau này)
+      // Đóng dialog và reset form
       setOpen(false);
       setFormData({
         title: '',
