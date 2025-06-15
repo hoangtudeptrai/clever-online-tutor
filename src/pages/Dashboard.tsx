@@ -14,6 +14,7 @@ import { useRecentActivities } from '@/hooks/useRecentActivities';
 import { useStudentActivities } from '@/hooks/useStudentActivities';
 import { useStudentGrades } from '@/hooks/useStudentGrades';
 import { Badge } from '@/components/ui/badge';
+import { useEnrolledCourses } from '@/hooks/useEnrolledCourses';
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -24,6 +25,7 @@ const Dashboard = () => {
   const { data: recentActivities, isLoading: activitiesLoading } = useRecentActivities();
   const { data: studentActivities, isLoading: studentActivitiesLoading } = useStudentActivities();
   const { data: studentGrades, isLoading: gradesLoading } = useStudentGrades();
+  const { data: enrolledCourses, isLoading: enrolledCoursesLoading } = useEnrolledCourses();
 
   // Helper to filter submissions needing grading for teacher
   const assignmentsToGrade = React.useMemo(() => 
@@ -187,30 +189,32 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Hoạt động gần đây */}
-          <Card className="lg:col-span-1 bg-white border border-gray-200 hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-center space-x-2">
-                <div className="p-2 rounded-lg bg-blue-50">
-                  <Clock className="h-5 w-5 text-blue-600" />
+          {/* Hoạt động gần đây - For Tutors Only */}
+          {profile?.role === 'tutor' && (
+            <Card className="lg:col-span-1 bg-white border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-lg bg-blue-50">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-semibold">Hoạt động gần đây</CardTitle>
+                    <CardDescription className="text-sm">Các hoạt động mới nhất trong hệ thống</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold">Hoạt động gần đây</CardTitle>
-                  <CardDescription className="text-sm">Các hoạt động mới nhất trong hệ thống</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {profile?.role === 'tutor' ? (
+              </CardHeader>
+              <CardContent>
                 <RecentActivities />
-              ) : (
-                <StudentActivities />
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* New content cards */}
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={
+            profile?.role === 'tutor' 
+            ? "lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6" 
+            : "lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          }>
             {profile?.role === 'tutor' ? (
               <>
                 {/* Teacher Card 1: My Courses */}
@@ -277,7 +281,35 @@ const Dashboard = () => {
               </>
             ) : (
               <>
-                {/* Student Card 1: Upcoming Assignments */}
+                {/* Student Card 1: My Enrolled Courses */}
+                <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle>Các khóa học của bạn</CardTitle>
+                    <CardDescription>Tiếp tục hành trình học tập</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {enrolledCoursesLoading ? (
+                      <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                      <div className="space-y-3">
+                        {enrolledCourses?.slice(0, 3).map(course => (
+                          <Link to={`/dashboard/courses/${course.id}`} key={course.id} className="block p-3 rounded-lg hover:bg-gray-50 border transition-colors">
+                            <h4 className="font-semibold truncate">{course.title}</h4>
+                            <p className="text-sm text-gray-500">GV: {course.instructor_name}</p>
+                          </Link>
+                        ))}
+                        {enrolledCourses && enrolledCourses.length > 3 && (
+                          <Link to="/dashboard/courses" className="block mt-4">
+                            <Button variant="outline" className="w-full">Xem tất cả khóa học <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                          </Link>
+                        )}
+                        {enrolledCourses?.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Bạn chưa tham gia khóa học nào.</p>}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Student Card 2: Upcoming Assignments */}
                 <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
                   <CardHeader>
                      <CardTitle>Bài tập sắp tới</CardTitle>
@@ -312,7 +344,7 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                {/* Student Card 2: Recent Grades */}
+                {/* Student Card 3: Recent Grades */}
                 <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
                   <CardHeader>
                     <CardTitle>Điểm số gần đây</CardTitle>
