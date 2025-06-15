@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
+import { BookOpen, Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, ArrowRight, Trophy } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,10 +10,39 @@ import RecentActivities from '@/components/RecentActivities';
 import StudentActivities from '@/components/StudentActivities';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useCourses } from '@/hooks/useCourses';
+import { useRecentActivities } from '@/hooks/useRecentActivities';
+import { useStudentActivities } from '@/hooks/useStudentActivities';
+import { useStudentGrades } from '@/hooks/useStudentGrades';
+import { Badge } from '@/components/ui/badge';
 
 const Dashboard = () => {
   const { profile } = useAuth();
   const { data: stats, isLoading: statsLoading } = useStats();
+
+  // Hooks for new cards
+  const { data: courses, isLoading: coursesLoading } = useCourses();
+  const { data: recentActivities, isLoading: activitiesLoading } = useRecentActivities();
+  const { data: studentActivities, isLoading: studentActivitiesLoading } = useStudentActivities();
+  const { data: studentGrades, isLoading: gradesLoading } = useStudentGrades();
+
+  // Helper to filter submissions needing grading for teacher
+  const assignmentsToGrade = React.useMemo(() => 
+    recentActivities?.filter(
+      (activity) => activity.type === 'submission' && (activity.grade === null || activity.grade === undefined)
+    ) || [], [recentActivities]);
+
+  // Helper to filter upcoming assignments for student
+  const upcomingAssignments = React.useMemo(() => 
+    studentActivities?.filter(
+      (activity) => activity.type === 'assignment_due_soon'
+    ) || [], [studentActivities]);
+
+  // Helper to get recent grades for student
+  const recentGrades = React.useMemo(() =>
+    studentGrades?.filter(g => g.status === 'graded').slice(0, 3) || [],
+    [studentGrades]
+  );
 
   const getTeacherStats = () => {
     if (!stats) return [];
@@ -158,122 +187,164 @@ const Dashboard = () => {
         </div>
 
         {/* Main Content */}
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Hoạt động gần đây */}
-            <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 rounded-lg bg-blue-50">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">Hoạt động gần đây</CardTitle>
-                    <CardDescription className="text-sm">Các hoạt động mới nhất trong hệ thống</CardDescription>
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Hoạt động gần đây */}
+          <Card className="lg:col-span-1 bg-white border border-gray-200 hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 rounded-lg bg-blue-50">
+                  <Clock className="h-5 w-5 text-blue-600" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {profile?.role === 'tutor' ? (
-                    <RecentActivities />
-                  ) : (
-                    <StudentActivities />
-                  )}
+                <div>
+                  <CardTitle className="text-lg font-semibold">Hoạt động gần đây</CardTitle>
+                  <CardDescription className="text-sm">Các hoạt động mới nhất trong hệ thống</CardDescription>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Quản lý & Học sinh Container */}
-            <div className="md:col-span-2 lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Quản lý */}
-              <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-2 rounded-lg bg-green-50">
-                      <BookOpen className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-semibold">Quản lý</CardTitle>
-                      <CardDescription className="text-sm">Quản lý khóa học và bài tập</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Link to="/dashboard/courses" className="block">
-                      <Button className="w-full justify-start" variant="outline">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Quản lý khóa học
-                      </Button>
-                    </Link>
-                    <Link to="/dashboard/assignments" className="block">
-                      <Button className="w-full justify-start" variant="outline">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Quản lý bài tập
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Chỉ hiển thị card "Học sinh" cho giáo viên */}
-              {profile?.role === 'tutor' && (
-                <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-2 rounded-lg bg-purple-50">
-                        <Users className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold">Học sinh</CardTitle>
-                        <CardDescription className="text-sm">Quản lý và theo dõi học sinh</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <Link to="/dashboard/students" className="block">
-                        <Button className="w-full justify-start" variant="outline">
-                          <Users className="h-4 w-4 mr-2" />
-                          Danh sách học sinh
-                        </Button>
-                      </Link>
-                      {/* Chỉ giáo viên thấy nút xem điểm số */}
-                      <Link to="/dashboard/grades" className="block">
-                        <Button className="w-full justify-start" variant="outline" disabled>
-                          <TrendingUp className="h-4 w-4 mr-2" />
-                          Xem điểm số
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Học sinh sẽ không thấy card này nữa */}
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Section for Students */}
-        {profile?.role === 'student' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Tiến độ học tập</CardTitle>
-              <CardDescription>Theo dõi tiến độ hoàn thành các khóa học</CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>Chưa có dữ liệu tiến độ học tập</p>
-              </div>
+              {profile?.role === 'tutor' ? (
+                <RecentActivities />
+              ) : (
+                <StudentActivities />
+              )}
             </CardContent>
           </Card>
-        )}
+
+          {/* New content cards */}
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {profile?.role === 'tutor' ? (
+              <>
+                {/* Teacher Card 1: My Courses */}
+                <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle>Các khóa học của bạn</CardTitle>
+                    <CardDescription>Tổng quan nhanh các khóa học</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {coursesLoading ? (
+                      <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                      <div className="space-y-3">
+                        {courses?.slice(0, 3).map(course => (
+                          <Link to={`/dashboard/courses/${course.id}`} key={course.id} className="block p-3 rounded-lg hover:bg-gray-50 border transition-colors">
+                            <h4 className="font-semibold">{course.title}</h4>
+                            <p className="text-sm text-gray-500">{course.students_count || 0} học sinh</p>
+                          </Link>
+                        ))}
+                        {courses && courses.length > 3 && (
+                          <Link to="/dashboard/courses" className="block mt-4">
+                            <Button variant="outline" className="w-full">Xem tất cả khóa học <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                          </Link>
+                        )}
+                        {courses?.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Bạn chưa tạo khóa học nào.</p>}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Teacher Card 2: Needs Grading */}
+                <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle>Cần chấm điểm</CardTitle>
+                    <CardDescription>Bài tập chờ chấm điểm</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {activitiesLoading ? (
+                       <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                      <div className="space-y-3">
+                        {assignmentsToGrade.slice(0, 3).map(activity => (
+                          <div key={activity.id} className="p-3 rounded-lg border">
+                            <p className="font-semibold text-sm truncate">{activity.assignment_title}</p>
+                            <p className="text-xs text-gray-500">
+                              {activity.student_name} đã nộp
+                            </p>
+                          </div>
+                        ))}
+                         {assignmentsToGrade.length > 3 && (
+                          <Link to="/dashboard/assignments" className="block mt-4">
+                            <Button variant="outline" className="w-full">Xem tất cả <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                          </Link>
+                        )}
+                        {assignmentsToGrade.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Không có bài tập nào cần chấm.</p>}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <>
+                {/* Student Card 1: Upcoming Assignments */}
+                <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                     <CardTitle>Bài tập sắp tới</CardTitle>
+                     <CardDescription>Đừng quên hoàn thành đúng hạn</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                     {studentActivitiesLoading ? (
+                       <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
+                     ) : (
+                       <div className="space-y-3">
+                         {upcomingAssignments.slice(0, 3).map(activity => (
+                           <Link to="/dashboard/assignments" key={activity.id} className="block p-3 rounded-lg hover:bg-gray-50 border transition-colors">
+                             <div className="flex justify-between items-center">
+                               <h4 className="font-semibold truncate">{activity.assignment_title}</h4>
+                               {activity.status === 'urgent' 
+                                 ? <Badge variant="destructive">Khẩn cấp</Badge>
+                                 : <Badge className="bg-orange-100 text-orange-800">Sắp đến hạn</Badge>
+                               }
+                             </div>
+                             <p className="text-sm text-gray-500 truncate">Khóa học: {activity.course_title}</p>
+                             {activity.due_date && <p className="text-xs text-gray-500">Hạn nộp: {new Date(activity.due_date).toLocaleDateString('vi-VN')}</p>}
+                           </Link>
+                         ))}
+                         {upcomingAssignments.length > 0 && (
+                          <Link to="/dashboard/assignments" className="block mt-4">
+                            <Button variant="outline" className="w-full">Xem tất cả bài tập <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                          </Link>
+                        )}
+                        {upcomingAssignments.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Không có bài tập nào sắp tới.</p>}
+                       </div>
+                     )}
+                  </CardContent>
+                </Card>
+
+                {/* Student Card 2: Recent Grades */}
+                <Card className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle>Điểm số gần đây</CardTitle>
+                    <CardDescription>Kết quả học tập của bạn</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                     {gradesLoading ? (
+                       <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
+                     ) : (
+                       <div className="space-y-3">
+                         {recentGrades.map(grade => (
+                           <Link to="/dashboard/grades" key={grade.id} className="block p-3 rounded-lg hover:bg-gray-50 border transition-colors">
+                            <div className="flex justify-between items-center">
+                               <h4 className="font-semibold truncate">{grade.assignment}</h4>
+                               <Badge><Trophy className="h-4 w-4 mr-1" />{grade.grade}/{grade.maxGrade}</Badge>
+                            </div>
+                            <p className="text-sm text-gray-500 truncate">{grade.course}</p>
+                           </Link>
+                         ))}
+                          {recentGrades.length > 0 && (
+                          <Link to="/dashboard/grades" className="block mt-4">
+                            <Button variant="outline" className="w-full">Xem tất cả điểm số <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                          </Link>
+                        )}
+                        {recentGrades.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Chưa có điểm số nào.</p>}
+                       </div>
+                     )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );
 };
 export default Dashboard;
-
