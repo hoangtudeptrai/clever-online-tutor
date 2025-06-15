@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,8 +77,9 @@ export const useCreateSubmission = () => {
 
       return submission;
     },
-    onSuccess: () => {
+    onSuccess: (submission) => {
       queryClient.invalidateQueries({ queryKey: ['assignment'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
       toast({
         title: "Thành công",
         description: "Đã nộp bài tập thành công",
@@ -125,8 +125,10 @@ export const useGradeSubmission = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (submission) => {
       queryClient.invalidateQueries({ queryKey: ['assignment'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['student-activities'] });
       toast({
         title: "Thành công",
         description: "Đã chấm điểm thành công",
