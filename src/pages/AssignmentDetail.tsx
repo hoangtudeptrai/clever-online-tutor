@@ -405,7 +405,7 @@ const AssignmentDetail = () => {
                 </div>
                  <div className="flex justify-between items-center">
                   <span className="text-gray-600">Đã nộp</span>
-                  <span className="font-medium">{submittedCount} / {assignment.total_students || submissions.length}</span>
+                  <span className="font-medium">{submittedCount} / {assignment.course?.students_count || submissions.length}</span>
                 </div>
                  <div className="flex justify-between items-center">
                   <span className="text-gray-600">Đã chấm</span>

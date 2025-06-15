@@ -35,12 +35,21 @@ export const useEnrolledCourses = () => {
         throw error;
       }
 
-      return data.map(item => ({
-        id: item.courses.id,
-        title: item.courses.title,
-        description: item.courses.description,
-        instructor_name: item.courses.instructor?.full_name || 'N/A'
-      }));
+      return data.map(item => {
+        const instructor = item.courses.instructor;
+        // The type from Supabase can sometimes be an array for a many-to-one relationship.
+        // This handles both cases to be safe.
+        const instructorName = Array.isArray(instructor)
+          ? instructor[0]?.full_name
+          : (instructor as any)?.full_name;
+
+        return {
+          id: item.courses.id,
+          title: item.courses.title,
+          description: item.courses.description,
+          instructor_name: instructorName || 'N/A'
+        };
+      });
     },
     enabled: !!profile && profile.role === 'student'
   });
