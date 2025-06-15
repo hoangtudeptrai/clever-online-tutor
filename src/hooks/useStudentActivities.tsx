@@ -49,19 +49,31 @@ export const useStudentActivities = (studentId?: string) => {
       if (submissionsError) throw submissionsError;
 
       // Get upcoming assignments
-      const { data: upcomingAssignments, error: upcomingError } = await supabase
-        .from('assignments')
-        .select(`
-          *,
-          courses!inner(title),
-          course_enrollments!inner(student_id)
-        `)
-        .eq('course_enrollments.student_id', targetStudentId)
-        .gte('due_date', new Date().toISOString())
-        .order('due_date', { ascending: true })
-        .limit(3);
+      const { data: enrolledCourseIdsData, error: enrolledCoursesError } = await supabase
+        .from('course_enrollments')
+        .select('course_id')
+        .eq('student_id', targetStudentId);
+      
+      if (enrolledCoursesError) throw enrolledCoursesError;
 
-      if (upcomingError) throw upcomingError;
+      const enrolledCourseIds = enrolledCourseIdsData?.map(c => c.course_id) || [];
+
+      let upcomingAssignments: any[] = [];
+      if (enrolledCourseIds.length > 0) {
+        const { data: assignmentsData, error: upcomingError } = await supabase
+          .from('assignments')
+          .select(`
+            *,
+            courses!inner(title)
+          `)
+          .in('course_id', enrolledCourseIds)
+          .gte('due_date', new Date().toISOString())
+          .order('due_date', { ascending: true })
+          .limit(3);
+
+        if (upcomingError) throw upcomingError;
+        upcomingAssignments = assignmentsData || [];
+      }
 
       const activities: StudentActivity[] = [];
 
