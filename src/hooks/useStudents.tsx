@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -110,6 +109,43 @@ export const useCourseStudents = (courseId: string) => {
       }
     },
     enabled: !!courseId,
+  });
+};
+
+export const useStudentEnrollments = (studentId: string) => {
+  return useQuery({
+    queryKey: ['student-enrollments', studentId],
+    queryFn: async () => {
+      if (!studentId) return [];
+
+      try {
+        const { data, error } = await supabase
+          .from('course_enrollments')
+          .select(`
+            id,
+            course_id,
+            enrolled_at,
+            progress,
+            status,
+            courses (
+              title
+            )
+          `)
+          .eq('student_id', studentId)
+          .order('enrolled_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching student enrollments:', error);
+          throw error;
+        }
+
+        return data || [];
+      } catch (error) {
+        console.error('Error in useStudentEnrollments:', error);
+        throw error;
+      }
+    },
+    enabled: !!studentId,
   });
 };
 

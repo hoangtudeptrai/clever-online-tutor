@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User, Mail, Phone, Calendar, TrendingUp, BookOpen, Award } from 'lucide-react';
 import {
@@ -11,8 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Student, CourseStudent } from '@/hooks/useStudents';
-import { useCourses } from '@/hooks/useCourses';
-import { useCourseStudents } from '@/hooks/useStudents';
+import { useStudentEnrollments } from '@/hooks/useStudents';
 
 interface StudentDetailDialogProps {
   student: Student | CourseStudent | null;
@@ -25,28 +25,19 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
   open, 
   onOpenChange 
 }) => {
-  // Nếu không có student thì return null
   if (!student) return null;
 
-  // Lấy danh sách các khóa học mà học sinh này đã tham gia
-  const { data: courses } = useCourses();
-  const { data: courseStudents } = useCourseStudents(student.course_id || '');
-  // Tính số khóa học mà học sinh đã tham gia
-  const coursesCount = courseStudents
-    ? courseStudents.filter(cs => cs.id === student.id).length
-    : 1;
+  const { data: enrollments, isLoading: isLoadingEnrollments } = useStudentEnrollments(student.id);
 
-  // Tính tiến độ TB
-  const averageProgress = courseStudents && courseStudents.length > 0
+  const coursesCount = enrollments?.length || 0;
+
+  const averageProgress = enrollments && enrollments.length > 0
     ? Math.round(
-        courseStudents
-          .filter(cs => cs.id === student.id)
-          .reduce((acc, cs) => acc + (cs.progress || 0), 0) /
-          courseStudents.filter(cs => cs.id === student.id).length
+        enrollments.reduce((acc, cs) => acc + (cs.progress || 0), 0) /
+        enrollments.length
       )
     : student.progress || 0;
 
-  // Điểm trung bình (giả định chưa có hệ điểm, đặt mặc định 8.5)
   const averageScore = 8.5;
 
   const formatDate = (dateString?: string) => {
@@ -54,7 +45,6 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
-  // Check if this is a CourseStudent (has course-specific data)
   const isCourseStudent = (student: Student | CourseStudent): student is CourseStudent => {
     return 'enrollment_id' in student;
   };
@@ -72,7 +62,6 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Student Profile */}
           <Card>
             <CardHeader>
               <div className="flex items-center space-x-4">
@@ -129,11 +118,10 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
             </CardContent>
           </Card>
 
-          {/* Course Progress (only for CourseStudent) */}
           {courseStudentData && (
             <Card>
               <CardHeader>
-                <CardTitle>Tiến độ khóa học</CardTitle>
+                <CardTitle>Tiến độ khóa học "{enrollments?.find(e => e.course_id === courseStudentData.course_id)?.courses?.title || 'hiện tại'}"</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -152,14 +140,13 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
             </Card>
           )}
 
-          {/* Learning Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <BookOpen className="h-8 w-8 text-blue-600" />
                   <div>
-                    <p className="text-2xl font-bold">{coursesCount}</p>
+                    <p className="text-2xl font-bold">{isLoadingEnrollments ? '...' : coursesCount}</p>
                     <p className="text-sm text-gray-600">Khóa học</p>
                   </div>
                 </div>
@@ -170,7 +157,7 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="h-8 w-8 text-green-600" />
                   <div>
-                    <p className="text-2xl font-bold">{averageProgress}%</p>
+                    <p className="text-2xl font-bold">{isLoadingEnrollments ? '...' : averageProgress}%</p>
                     <p className="text-sm text-gray-600">Tiến độ TB</p>
                   </div>
                 </div>
@@ -189,33 +176,33 @@ const StudentDetailDialog: React.FC<StudentDetailDialogProps> = ({
             </Card>
           </div>
 
-          {/* Recent Activity */}
           <Card>
             <CardHeader>
               <CardTitle>Hoạt động gần đây</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">Nộp bài tập: Lập trình Web</p>
-                    <p className="text-sm text-gray-600">2 ngày trước</p>
-                  </div>
-                  <Badge className="bg-green-100 text-green-800">Hoàn thành</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">
-                      {courseStudentData ? `Tham gia khóa học` : 'Tham gia khóa học: React Nâng cao'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {courseStudentData ? formatDate(courseStudentData.enrolled_at) : '1 tuần trước'}
-                    </p>
-                  </div>
-                  <Badge className="bg-blue-100 text-blue-800">
-                    {courseStudentData ? 'Đang học' : 'Mới'}
-                  </Badge>
-                </div>
+                {isLoadingEnrollments ? (
+                  <p className="text-sm text-gray-500">Đang tải hoạt động...</p>
+                ) : enrollments && enrollments.length > 0 ? (
+                  enrollments.slice(0, 3).map(enrollment => (
+                     <div key={enrollment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                       <div>
+                         <p className="font-medium">
+                           Tham gia khóa học: {enrollment.courses?.title}
+                         </p>
+                         <p className="text-sm text-gray-600">
+                           {formatDate(enrollment.enrolled_at)}
+                         </p>
+                       </div>
+                       <Badge className="bg-blue-100 text-blue-800">
+                         {enrollment.status === 'enrolled' ? 'Đang học' : enrollment.status}
+                       </Badge>
+                     </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">Không có hoạt động gần đây.</p>
+                )}
               </div>
             </CardContent>
           </Card>
