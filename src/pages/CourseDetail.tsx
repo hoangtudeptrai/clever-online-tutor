@@ -25,10 +25,12 @@ import { Link } from 'react-router-dom';
 import EditCourseDialog from '@/components/EditCourseDialog';
 import { TeacherCourse } from '@/types/course';
 import { deleteApi, getApi } from '@/utils/api';
-import { COURSES_API } from '@/components/api-url';
+import { COURSE_DOCUMENT_API, COURSES_API } from '@/components/api-url';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'react-hot-toast';
+import { Document } from '@/types/document';
+import { formatDate } from '@/utils/format';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
@@ -42,11 +44,11 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<TeacherCourse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [courseDocuments, setCourseDocuments] = useState<Document[]>([]);
 
-  const getCourse = async () => {
+  const fetchCourse = async () => {
     try {
       const res = await getApi(`${COURSES_API.GET_BY_ID(courseId)}`);
-      console.log('res', res);
       setCourse(res.data);
     } catch (error) {
       console.log('error', error);
@@ -56,12 +58,23 @@ const CourseDetail = () => {
     }
   };
 
+  const fetchCourseDocuments = async () => {
+    try {
+      const res = await getApi(`${COURSE_DOCUMENT_API.GET_BY_COURSE_ID(courseId)}`);
+      setCourseDocuments(res.data);
+    } catch (error) {
+      console.log('error', error);
+    }
+  };
+
   useEffect(() => {
-    getCourse();
+    fetchCourse();
+    fetchCourseDocuments();
   }, []);
 
   const onSuccess = () => {
-    getCourse();
+    fetchCourse();
+    fetchCourseDocuments();
   };
 
   const handleDelete = async () => {
@@ -125,41 +138,41 @@ const CourseDetail = () => {
   ];
 
   // Mock data cho tài liệu của khóa học
-  const courseDocuments = [
-    {
-      id: 1,
-      title: 'Giáo trình HTML cơ bản',
-      description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
-      category: 'Giáo trình',
-      course: "ReactJS Mastery",
-      type: 'pdf',
-      size: '2.5 MB',
-      downloads: 245,
-      uploadDate: '2025-03-15'
-    },
-    {
-      id: 2,
-      title: 'Video bài giảng CSS',
-      description: 'Video hướng dẫn CSS cho người mới bắt đầu',
-      category: 'Video bài giảng',
-      course: "ReactJS Mastery",
-      type: 'video',
-      size: '125 MB',
-      downloads: 189,
-      uploadDate: '2025-03-20'
-    },
-    {
-      id: 3,
-      title: 'Slide JavaScript ES6',
-      description: 'Slide trình bày về JavaScript ES6+',
-      category: 'Slide',
-      course: "ReactJS Mastery",
-      type: 'pptx',
-      size: '8.2 MB',
-      downloads: 167,
-      uploadDate: '2025-03-25'
-    }
-  ];
+  // const courseDocuments = [
+  //   {
+  //     id: 1,
+  //     title: 'Giáo trình HTML cơ bản',
+  //     description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
+  //     category: 'Giáo trình',
+  //     course: "ReactJS Mastery",
+  //     type: 'pdf',
+  //     size: '2.5 MB',
+  //     downloads: 245,
+  //     uploadDate: '2025-03-15'
+  //   },
+  //   {
+  //     id: 2,
+  //     title: 'Video bài giảng CSS',
+  //     description: 'Video hướng dẫn CSS cho người mới bắt đầu',
+  //     category: 'Video bài giảng',
+  //     course: "ReactJS Mastery",
+  //     type: 'video',
+  //     size: '125 MB',
+  //     downloads: 189,
+  //     uploadDate: '2025-03-20'
+  //   },
+  //   {
+  //     id: 3,
+  //     title: 'Slide JavaScript ES6',
+  //     description: 'Slide trình bày về JavaScript ES6+',
+  //     category: 'Slide',
+  //     course: "ReactJS Mastery",
+  //     type: 'pptx',
+  //     size: '8.2 MB',
+  //     downloads: 167,
+  //     uploadDate: '2025-03-25'
+  //   }
+  // ];
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -203,7 +216,7 @@ const CourseDetail = () => {
 
   const filteredDocuments = courseDocuments.filter(doc =>
     doc.title.toLowerCase().includes(searchDocuments.toLowerCase()) ||
-    doc.category.toLowerCase().includes(searchDocuments.toLowerCase())
+    doc.description.toLowerCase().includes(searchDocuments.toLowerCase())
   );
 
   return (
@@ -427,7 +440,7 @@ const CourseDetail = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Quản lý tài liệu</CardTitle>
-                    <CreateDocumentDialog />
+                    <CreateDocumentDialog courseId={course?.id} onSuccess={onSuccess} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -460,19 +473,19 @@ const CourseDetail = () => {
                           <TableRow key={document.id}>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                {getFileIcon(document.type)}
+                                {getFileIcon(document?.file_type)}
                                 <span className="font-medium">{document.title}</span>
                               </div>
                             </TableCell>
                             <TableCell className="max-w-xs truncate">{document.description}</TableCell>
                             <TableCell>
-                              <Badge variant="outline">{document.category}</Badge>
+                              <Badge variant="outline">{document.file_type}</Badge>
                             </TableCell>
-                            <TableCell>{document.size}</TableCell>
+                            <TableCell>{document.file_size}</TableCell>
                             <TableCell>{document.downloads}</TableCell>
-                            <TableCell>{document.uploadDate}</TableCell>
+                            <TableCell>{formatDate(document.createdAt)}</TableCell>
                             <TableCell>
-                              <DocumentActionsMenu document={document} />
+                              <DocumentActionsMenu document={document} onSuccess={onSuccess} />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -590,10 +603,10 @@ const CourseDetail = () => {
                         <CardHeader>
                           <div className="flex items-start justify-between">
                             <div className="flex items-center space-x-2">
-                              {getFileIcon(document.type)}
+                              {getFileIcon(document.file_type)}
                               <CardTitle className="text-lg">{document.title}</CardTitle>
                             </div>
-                            <Badge variant="outline">{document.category}</Badge>
+                            <Badge variant="outline">{document.file_type}</Badge>
                           </div>
                         </CardHeader>
                         <CardContent>
@@ -602,11 +615,11 @@ const CourseDetail = () => {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Kích thước:</span>
-                              <span className="font-medium">{document.size}</span>
+                              <span className="font-medium">{document.file_size}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Lượt tải:</span>
-                              <span className="font-medium">{document.downloads}</span>
+                              <span className="font-medium">{document.download_count}</span>
                             </div>
                           </div>
 

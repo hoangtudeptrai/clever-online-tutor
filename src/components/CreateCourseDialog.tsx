@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { postApi } from '@/utils/api';
 import { COURSES_API, FILES_API } from './api-url';
-import { CourseRequest } from '@/types/course';
+import { Course } from '@/types/course';
 import { toast } from 'sonner';
 import { getUser } from '@/utils/getUser';
 
@@ -26,16 +26,17 @@ interface CreateCourseDialogProps {
 const CreateCourseDialog = ({ onSuccess }: CreateCourseDialogProps) => {
   const [open, setOpen] = useState(false);
   const user = getUser();
-  const [formData, setFormData] = useState<CourseRequest>({
+  const [formData, setFormData] = useState<Partial<Course>>({
     title: '',
     description: '',
     duration: '',
-    maxStudents: 0,
+    lessons_count: 0,
+    students_count: 0,
     thumbnail: '',
     instructor_id: user?.id || ''
   });
 
-  const createCourse = async (data: CourseRequest): Promise<boolean> => {
+  const createCourse = async (data: Partial<Course>): Promise<boolean> => {
     try {
       const res = await postApi(`${COURSES_API.CREATE}`, data);
       console.log('res', res);

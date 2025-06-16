@@ -141,7 +141,7 @@ const Documents = () => {
               }
             </p>
           </div>
-          {user?.role === 'teacher' && <CreateDocumentDialog />}
+          {/* {user?.role === 'teacher' && <CreateDocumentDialog courseId={course?.id} onSuccess={onSuccess} />} */}
         </div>
 
         {/* Search */}

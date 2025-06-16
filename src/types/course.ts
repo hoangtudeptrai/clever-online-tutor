@@ -27,18 +27,6 @@ export interface CourseBasicInfo {
   students_count: number;
 }
 
-export interface CourseResponse {
-  data: Course;
-  message: string;
-}
-
-export interface CourseListResponse {
-  data: Course[];
-  total: number;
-  page: number;
-  limit: number;
-} 
-
 export interface TeacherCourse {
   id: string;
   title: string;

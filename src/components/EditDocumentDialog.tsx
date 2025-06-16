@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import {
   Dialog,
@@ -20,55 +20,93 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Document } from '@/types/document';
+import { Course } from '@/types/course';
+import { getApi, postApi, putApi } from '@/utils/api';
+import { COURSE_DOCUMENT_API, COURSES_API, FILES_API } from './api-url';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'react-hot-toast';
 
 interface EditDocumentDialogProps {
-  document: {
-    id: number;
-    title: string;
-    description: string;
-    category: string;
-    course: string;
-  };
+  document: Document;
   open: boolean;
+  courseId: string;
+  onSuccess: () => void;
   onOpenChange: (open: boolean) => void;
 }
 
-const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open, onOpenChange }) => {
+const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open, onOpenChange, courseId, onSuccess }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: document.title,
     description: document.description,
-    category: document.category,
-    course: document.course,
-    file: null as File | null
+    course_id: document.course_id,
+    file_type: document.file_type,
+    file_size: document.file_size,
+    file_name: document.file_name,
+    file_path: document.file_path,
+    uploaded_by: document.uploaded_by,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
   });
+  const [courses, setCourses] = useState<Course[]>([]);
 
-  const courses = [
-    'Lập trình Web',
-    'React Nâng cao',
-    'Node.js Cơ bản',
-    'Database Design'
-  ];
+  useEffect(() => {
+    if (courseId) {
+      setFormData({ ...formData, course_id: courseId });
+    }
+    if (!courseId) {
+      fetchCourses();
+    }
+  }, [open]);
 
-  const categories = [
-    'Giáo trình',
-    'Video bài giảng',
-    'Slide',
-    'Hình ảnh',
-    'Tài liệu tham khảo',
-    'Source code'
-  ];
+  const fetchCourses = async (): Promise<Course[]> => {
+    try {
+      const response = await getApi(COURSES_API.GET_ALL);
+      setCourses(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      throw error;
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Cập nhật tài liệu:', formData);
     // Logic cập nhật tài liệu
+    const params = {
+      ...formData,
+      uploaded_by: user?.id
+    };
+    putApi(COURSE_DOCUMENT_API.UPDATE(document.id), params).then(() => {
+      toast.success('Cập nhật tài liệu thành công'); 
+      onSuccess();
+    }).catch((error) => {
+      toast.error('Cập nhật tài liệu thất bại');
+    });
     onOpenChange(false);
   };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setFormData({ ...formData, file });
+    try {
+      const uploadFileData = new FormData();
+      uploadFileData.append('file', file);
+
+      const response = await postApi(FILES_API.UPLOAD(user?.id), uploadFileData);
+      if (response.status === 200) {
+        setFormData({
+          ...formData,
+          file_name: response.data.file_name,
+          file_path: response.data.file_path,
+          file_type: response.data.file_type,
+          file_size: response.data.file_size,
+        });
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Tải lên tài liệu thất bại');
     }
   };
 
@@ -107,7 +145,7 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Khóa học *</Label>
                 <Select value={formData.course} onValueChange={(value) => setFormData({ ...formData, course: value })}>
@@ -138,7 +176,7 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            </div> */}
 
             <div>
               <Label>File tài liệu mới (tùy chọn)</Label>
@@ -151,14 +189,21 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
                         Chọn file mới
                       </Button>
                       <p className="text-sm text-gray-500">PDF, DOC, PPT, Video, Image lên đến 50MB</p>
-                      {formData.file && (
+                      {formData.file_name && (
                         <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
-                          <span>{formData.file.name}</span>
+                          <span>{formData.file_name}</span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => setFormData({ ...formData, file: null })}
+                            onClick={() => setFormData({
+                              ...formData,
+                              file_name: '',
+                              file_path: '',
+                              file_type: '',
+                              file_size: 0,
+                              uploaded_by: ''
+                            })}
                           >
                             <X className="h-4 w-4" />
                           </Button>

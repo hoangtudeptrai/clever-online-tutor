@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MoreVertical, Edit, Trash2, Eye, Download } from 'lucide-react';
 import {
@@ -19,25 +18,30 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import EditDocumentDialog from './EditDocumentDialog';
+import { deleteApi } from '@/utils/api';
+import { COURSE_DOCUMENT_API } from './api-url';
+import { toast } from 'react-hot-toast';
+import { Document } from '@/types/document';
 
 interface DocumentActionsMenuProps {
-  document: {
-    id: number;
-    title: string;
-    description: string;
-    category: string;
-    course: string;
-  };
+  document: Document;
+  onSuccess: () => void;
 }
 
-const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document }) => {
+const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document, onSuccess }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const handleDelete = () => {
-    console.log('Xóa tài liệu:', document.id);
-    // Logic xóa tài liệu
-    setShowDeleteDialog(false);
+  const handleDelete = async () => {
+    try {
+      await deleteApi(COURSE_DOCUMENT_API.DELETE(document.id));
+      toast.success('Xóa tài liệu thành công');
+      setShowDeleteDialog(false);
+      onSuccess(); // This will trigger the parent component to refresh the list
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Xóa tài liệu thất bại');
+    }
   };
 
   const handleView = () => {
@@ -85,6 +89,8 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document }) =
         document={document}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
+        courseId={document.course_id}
+        onSuccess={onSuccess}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
