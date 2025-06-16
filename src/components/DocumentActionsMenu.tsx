@@ -18,26 +18,28 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import EditDocumentDialog from './EditDocumentDialog';
-import { deleteApi } from '@/utils/api';
-import { COURSE_DOCUMENT_API } from './api-url';
+import { deleteApi, getApi } from '@/utils/api';
+import { COURSE_DOCUMENT_API, FILES_API } from './api-url';
 import { toast } from 'react-hot-toast';
 import { Document } from '@/types/document';
+import axios from 'axios';
+import ViewDocumentDialog from './ViewDocumentDialog';
 
 interface DocumentActionsMenuProps {
   document: Document;
   onSuccess: () => void;
 }
 
-const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document, onSuccess }) => {
+const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document: doc, onSuccess }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
+  const [showViewDialog, setShowViewDialog] = useState(false);
   const handleDelete = async () => {
     try {
-      await deleteApi(COURSE_DOCUMENT_API.DELETE(document.id));
+      await deleteApi(COURSE_DOCUMENT_API.DELETE(doc.id));
       toast.success('Xóa tài liệu thành công');
       setShowDeleteDialog(false);
-      onSuccess(); // This will trigger the parent component to refresh the list
+      onSuccess();
     } catch (error) {
       console.error('Error deleting document:', error);
       toast.error('Xóa tài liệu thất bại');
@@ -45,13 +47,35 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document, onS
   };
 
   const handleView = () => {
-    console.log('Xem tài liệu:', document.id);
-    // Logic xem tài liệu
+    // setShowViewDialog(true);
   };
 
-  const handleDownload = () => {
-    console.log('Tải xuống tài liệu:', document.id);
-    // Logic tải xuống tài liệu
+  const handleDownload = async () => {
+    try {
+      const response = await getApi(FILES_API.GET_FILE(doc.file_name));
+      const fileUrl = response?.data?.url;
+
+      const fileResponse = await axios.get(fileUrl, {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(fileResponse.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.file_name || doc.title || 'download';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(url);
+
+
+      toast.success('Tải xuống tài liệu thành công');
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Tải xuống tài liệu thất bại');
+    }
   };
 
   return (
@@ -75,7 +99,7 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document, onS
             <Edit className="h-4 w-4 mr-2" />
             Chỉnh sửa
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
             className="text-red-600 focus:text-red-600"
           >
@@ -86,11 +110,17 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document, onS
       </DropdownMenu>
 
       <EditDocumentDialog
-        document={document}
+        document={doc}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-        courseId={document.course_id}
+        courseId={doc.course_id}
         onSuccess={onSuccess}
+      />
+
+      <ViewDocumentDialog
+        document={doc}
+        open={showViewDialog}
+        onOpenChange={setShowViewDialog}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -98,7 +128,7 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document, onS
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa tài liệu</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa tài liệu "{document.title}"? 
+              Bạn có chắc chắn muốn xóa tài liệu "{doc.title}"?
               Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
