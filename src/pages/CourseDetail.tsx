@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {  useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,6 @@ import EditCourseDialog from '@/components/EditCourseDialog';
 import { TeacherCourse } from '@/types/course';
 import { deleteApi, getApi } from '@/utils/api';
 import { COURSE_DOCUMENT_API, COURSES_API } from '@/components/api-url';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'react-hot-toast';
 import { Document } from '@/types/document';
@@ -39,7 +38,7 @@ const CourseDetail = () => {
   const [loading, setLoading] = useState(false);
   const [searchAssignments, setSearchAssignments] = useState('');
   const [searchDocuments, setSearchDocuments] = useState('');
-  const [showEditDialog, setShowEditDialog] = useState(false);  
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [course, setCourse] = useState<TeacherCourse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -86,9 +85,9 @@ const CourseDetail = () => {
     try {
       setIsDeleting(true);
       setError(null);
-      
+
       await deleteApi(`${COURSES_API.DELETE(course.id)}`);
-      
+
       toast.success('Xóa khóa học thành công');
       onSuccess();
       navigate('/dashboard/courses');
@@ -137,56 +136,19 @@ const CourseDetail = () => {
     }
   ];
 
-  // Mock data cho tài liệu của khóa học
-  // const courseDocuments = [
-  //   {
-  //     id: 1,
-  //     title: 'Giáo trình HTML cơ bản',
-  //     description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
-  //     category: 'Giáo trình',
-  //     course: "ReactJS Mastery",
-  //     type: 'pdf',
-  //     size: '2.5 MB',
-  //     downloads: 245,
-  //     uploadDate: '2025-03-15'
-  //   },
-  //   {
-  //     id: 2,
-  //     title: 'Video bài giảng CSS',
-  //     description: 'Video hướng dẫn CSS cho người mới bắt đầu',
-  //     category: 'Video bài giảng',
-  //     course: "ReactJS Mastery",
-  //     type: 'video',
-  //     size: '125 MB',
-  //     downloads: 189,
-  //     uploadDate: '2025-03-20'
-  //   },
-  //   {
-  //     id: 3,
-  //     title: 'Slide JavaScript ES6',
-  //     description: 'Slide trình bày về JavaScript ES6+',
-  //     category: 'Slide',
-  //     course: "ReactJS Mastery",
-  //     type: 'pptx',
-  //     size: '8.2 MB',
-  //     downloads: 167,
-  //     uploadDate: '2025-03-25'
-  //   }
-  // ];
-
   const getStatusBadge = (status: string) => {
     const colors = {
       active: 'bg-green-100 text-green-800',
       draft: 'bg-yellow-100 text-yellow-800',
       completed: 'bg-blue-100 text-blue-800'
     };
-    
+
     const labels = {
       active: 'Đang mở',
       draft: 'Nháp',
       completed: 'Hoàn thành'
     };
-    
+
     return (
       <Badge className={colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
         {labels[status as keyof typeof labels] || status}
@@ -240,9 +202,9 @@ const CourseDetail = () => {
                 <Edit className="h-4 w-4 mr-2" />
                 Chỉnh sửa
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="text-red-600 hover:text-red-700"
                 onClick={() => setShowDeleteDialog(true)}
               >
@@ -267,7 +229,7 @@ const CourseDetail = () => {
                 Bạn có chắc chắn muốn xóa khóa học này? Hành động này không thể hoàn tác.
               </DialogDescription>
             </DialogHeader>
-            
+
             {error && (
               <div className="text-red-500 text-sm mt-2">
                 {error}
@@ -332,7 +294,7 @@ const CourseDetail = () => {
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                <span className="text-green-600 font-bold">80%</span>
+                  <span className="text-green-600 font-bold">80%</span>
                   {/* <span className="text-green-600 font-bold">{course.progress_count}%</span> */}
                 </div>
                 <div>
@@ -353,11 +315,11 @@ const CourseDetail = () => {
               <TabsTrigger value="assignments">Bài tập</TabsTrigger>
               <TabsTrigger value="documents">Tài liệu</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="students" className="space-y-4">
               <StudentsManagement />
             </TabsContent>
-            
+
             <TabsContent value="lessons" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -368,13 +330,13 @@ const CourseDetail = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="assignments" className="space-y-4">
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Quản lý bài tập</CardTitle>
-                    <CreateAssignmentDialog />
+                    <CreateAssignmentDialog onSuccess={onSuccess} courseId={course?.id} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -415,7 +377,7 @@ const CourseDetail = () => {
                             </TableCell>
                             <TableCell>{assignment.maxGrade} điểm</TableCell>
                             <TableCell>25/30</TableCell>
-                              {/* <TableCell>{assignment.submissions}/{course.students_count}</TableCell> */}
+                            {/* <TableCell>{assignment.submissions}/{course.students_count}</TableCell> */}
                             <TableCell>{getStatusBadge(assignment.status)}</TableCell>
                             <TableCell>
                               <AssignmentActionsMenu assignment={assignment} />
@@ -434,7 +396,7 @@ const CourseDetail = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="documents" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -509,7 +471,7 @@ const CourseDetail = () => {
               <TabsTrigger value="assignments">Bài tập</TabsTrigger>
               <TabsTrigger value="documents">Tài liệu</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="lessons" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -520,7 +482,7 @@ const CourseDetail = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="assignments" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -547,7 +509,7 @@ const CourseDetail = () => {
                         </CardHeader>
                         <CardContent>
                           <p className="text-sm text-gray-600 mb-4">{assignment.description}</p>
-                          
+
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Hạn nộp:</span>
@@ -581,7 +543,7 @@ const CourseDetail = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="documents" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -611,7 +573,7 @@ const CourseDetail = () => {
                         </CardHeader>
                         <CardContent>
                           <p className="text-sm text-gray-600 mb-4">{document.description}</p>
-                          
+
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Kích thước:</span>
