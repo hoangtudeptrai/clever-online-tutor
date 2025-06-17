@@ -25,11 +25,12 @@ import { Link } from 'react-router-dom';
 import EditCourseDialog from '@/components/EditCourseDialog';
 import { TeacherCourse } from '@/types/course';
 import { deleteApi, getApi } from '@/utils/api';
-import { COURSE_DOCUMENT_API, COURSES_API } from '@/components/api-url';
+import { ASSIGNMENTS_API, COURSE_DOCUMENT_API, COURSES_API } from '@/components/api-url';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'react-hot-toast';
 import { Document } from '@/types/document';
 import { formatDate } from '@/utils/format';
+import { Assignment } from '@/types/assignment';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
@@ -44,6 +45,7 @@ const CourseDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [courseDocuments, setCourseDocuments] = useState<Document[]>([]);
+  const [courseAssignments, setCourseAssignments] = useState<Assignment[]>([]);
 
   const fetchCourse = async () => {
     try {
@@ -66,14 +68,25 @@ const CourseDetail = () => {
     }
   };
 
+  const fetchCourseAssignments = async () => {
+    try {
+      const res = await getApi(`${ASSIGNMENTS_API.GET_BY_COURSE_ID(courseId)}`);
+      setCourseAssignments(res.data);
+    } catch (error) {
+      console.log('error', error);
+    }
+  };
+
   useEffect(() => {
     fetchCourse();
     fetchCourseDocuments();
+    fetchCourseAssignments();
   }, []);
 
   const onSuccess = () => {
     fetchCourse();
     fetchCourseDocuments();
+    fetchCourseAssignments();
   };
 
   const handleDelete = async () => {
@@ -101,40 +114,6 @@ const CourseDetail = () => {
       setShowDeleteDialog(false);
     }
   };
-
-  // Mock data cho bài tập của khóa học
-  const courseAssignments = [
-    {
-      id: 1,
-      title: 'Bài tập HTML cơ bản',
-      description: 'Tạo trang web đơn giản với HTML',
-      course: "ReactJS Mastery",
-      dueDate: '2025-04-15',
-      maxGrade: 10,
-      submissions: 25,
-      status: 'active'
-    },
-    {
-      id: 2,
-      title: 'Thực hành CSS Flexbox',
-      description: 'Xây dựng layout responsive với Flexbox',
-      course: "ReactJS Mastery",
-      dueDate: '2025-04-20',
-      maxGrade: 10,
-      submissions: 18,
-      status: 'active'
-    },
-    {
-      id: 3,
-      title: 'Dự án JavaScript',
-      description: 'Tạo ứng dụng web tương tác với JavaScript',
-      course: "ReactJS Mastery",
-      dueDate: '2025-04-25',
-      maxGrade: 15,
-      submissions: 0,
-      status: 'draft'
-    }
-  ];
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -372,15 +351,15 @@ const CourseDetail = () => {
                             <TableCell>
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4 text-gray-400" />
-                                <span>{assignment.dueDate}</span>
+                                <span>{assignment.due_date}</span>
                               </div>
                             </TableCell>
-                            <TableCell>{assignment.maxGrade} điểm</TableCell>
+                            <TableCell>{assignment.max_score} điểm</TableCell>
                             <TableCell>25/30</TableCell>
                             {/* <TableCell>{assignment.submissions}/{course.students_count}</TableCell> */}
                             <TableCell>{getStatusBadge(assignment.status)}</TableCell>
                             <TableCell>
-                              <AssignmentActionsMenu assignment={assignment} />
+                              <AssignmentActionsMenu assignment={assignment} onSuccess={onSuccess} courseId={course?.id} />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -444,7 +423,7 @@ const CourseDetail = () => {
                               <Badge variant="outline">{document.file_type}</Badge>
                             </TableCell>
                             <TableCell>{document.file_size}</TableCell>
-                            <TableCell>{document.downloads}</TableCell>
+                            <TableCell>{document.download_count}</TableCell>
                             <TableCell>{formatDate(document.createdAt)}</TableCell>
                             <TableCell>
                               <DocumentActionsMenu document={document} onSuccess={onSuccess} />
@@ -513,11 +492,11 @@ const CourseDetail = () => {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Hạn nộp:</span>
-                              <span className="font-medium">{assignment.dueDate}</span>
+                              <span className="font-medium">{assignment.due_date}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Điểm tối đa:</span>
-                              <span className="font-medium">{assignment.maxGrade} điểm</span>
+                              <span className="font-medium">{assignment.max_score} điểm</span>
                             </div>
                           </div>
 

@@ -34,6 +34,7 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document: doc
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
+
   const handleDelete = async () => {
     try {
       await deleteApi(COURSE_DOCUMENT_API.DELETE(doc.id));

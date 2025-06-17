@@ -65,7 +65,6 @@ const CreateAssignmentDialog: React.FC<CreateAssignmentDialogProps> = ({ onSucce
   const fetchCourses = async () => {
     try {
       const response = await getApi(COURSES_API.GET_ALL);
-      console.log('response', response);
       setCourses(response.data);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -127,8 +126,9 @@ const CreateAssignmentDialog: React.FC<CreateAssignmentDialogProps> = ({ onSucce
       const uploadPromises = attachmentMetadata.map(async (metadata) => {
         const uploadData = new FormData();
         uploadData.append('file', metadata.file, metadata.file.name);
+
         const res = await postApi(FILES_API.UPLOAD(user.id), uploadData)
-        console.log('res', res);
+
         if (res?.data) {
           const params = {
             title: metadata.title,

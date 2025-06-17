@@ -19,30 +19,36 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import EditAssignmentDialog from './EditAssignmentDialog';
+import { deleteApi } from '@/utils/api';
+import { ASSIGNMENTS_API } from './api-url';
+import { Assignment } from '@/types/assignment';
+import { toast } from 'react-hot-toast';
+import { Navigate } from 'react-router-dom';
 
 interface AssignmentActionsMenuProps {
-  assignment: {
-    id: number;
-    title: string;
-    description: string;
-    course: string;
-    dueDate: string;
-  };
+  assignment: Assignment;
+  onSuccess: () => void;
+  courseId: string;
 }
 
-const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignment }) => {
+const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignment, onSuccess, courseId }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const handleDelete = () => {
-    console.log('Xóa bài tập:', assignment.id);
-    // Logic xóa bài tập
-    setShowDeleteDialog(false);
+  const handleDelete = async () => {
+    await deleteApi(`${ASSIGNMENTS_API.DELETE(assignment.id)}`).then(() => {
+      onSuccess();
+      setShowDeleteDialog(false);
+      toast.success('Xóa bài tập thành công');
+    }).catch((error) => {
+      console.log('error', error);
+      toast.error('Xóa bài tập thất bại');
+    });
   };
 
   const handleView = () => {
-    console.log('Xem chi tiết bài tập:', assignment.id);
     // Logic xem chi tiết bài tập
+    // navigate to /course/courseId/assignment/assignmentId
   };
 
   return (
@@ -62,7 +68,7 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
             <Edit className="h-4 w-4 mr-2" />
             Chỉnh sửa
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
             className="text-red-600 focus:text-red-600"
           >
@@ -76,6 +82,8 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
         assignment={assignment}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
+        courseId={courseId}
+        onSuccess={onSuccess}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -83,7 +91,7 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa bài tập</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa bài tập "{assignment.title}"? 
+              Bạn có chắc chắn muốn xóa bài tập "{assignment.title}"?
               Hành động này không thể hoàn tác và sẽ xóa tất cả bài nộp của học sinh.
             </AlertDialogDescription>
           </AlertDialogHeader>

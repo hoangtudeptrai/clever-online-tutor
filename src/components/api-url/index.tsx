@@ -28,6 +28,7 @@ export const COURSE_DOCUMENT_API = {
 export const ASSIGNMENTS_API = {
     GET_ALL: '/assignments',
     GET_BY_ID: (id: string) => `/assignments/${id}`,
+    GET_BY_COURSE_ID: (course_id: string) => `/assignments/course/${course_id}`,
     CREATE: '/assignments',
     UPDATE: (id: string) => `/assignments/${id}`,
     DELETE: (id: string) => `/assignments/${id}`
