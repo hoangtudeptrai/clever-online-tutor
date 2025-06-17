@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, CheckCircle, Clock, XCircle, Upload, FileText, Download, Trash2, Paperclip, Send } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,39 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
-
-interface AssignmentDocument {
-  id: number;
-  title: string;
-  description: string;
-  fileName: string;
-  fileSize: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  fileType: string;
-}
-
-interface SubmissionFile {
-  id: number;
-  fileName: string;
-  fileSize: string;
-  uploadedAt: string;
-  fileType: string;
-}
-
-interface Assignment {
-  id: number;
-  title: string;
-  description: string;
-  dueDate: string;
-  submittedDate?: string | null;
-  status: string;
-  grade?: number | null;
-  feedback?: string | null;
-  documents: AssignmentDocument[];
-  submissionFiles?: SubmissionFile[];
-  course: string;
-}
+import { getApi } from '@/utils/api';
+import { ASSIGNMENTS_API } from '@/components/api-url';
+import { Assignment } from '@/types/assignment';
 
 const AssignmentDetail = () => {
   const { assignmentId } = useParams();
@@ -49,42 +18,67 @@ const AssignmentDetail = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submissionText, setSubmissionText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [assignment, setAssignment] = useState<Assignment>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === 'teacher') {
+      fetchAssignment();
+    }
+  }, [user?.role]);
+
+  const fetchAssignment = async () => {
+    try {
+      setLoading(true);
+      const res = await getApi(ASSIGNMENTS_API.GET_BY_ID(assignmentId));
+      if (res.data) {
+        setAssignment(res.data);
+      } else {
+        setAssignment(null);
+      }
+    } catch (error) {
+      console.log('error', error);
+    }
+    finally {
+      setLoading(false);
+    }
+  };
 
   // Mock assignment data
-  const assignment: Assignment = {
-    id: parseInt(assignmentId || '1'),
-    title: 'Bài tập 2: JavaScript DOM',
-    description: 'Tạo một trang web tương tác sử dụng JavaScript để thao tác DOM. Yêu cầu:\n\n1. Tạo một form đăng ký với validation\n2. Hiển thị danh sách người dùng động\n3. Thêm chức năng tìm kiếm và lọc\n4. Sử dụng Local Storage để lưu trữ dữ liệu\n\nHạn nộp: 20/04/2025\nĐịnh dạng file: .html, .css, .js hoặc .zip',
-    dueDate: '2025-04-20',
-    submittedDate: null,
-    status: 'pending',
-    grade: null,
-    feedback: null,
-    course: 'Lập trình Web',
-    documents: [
-      {
-        id: 1,
-        title: 'Hướng dẫn JavaScript DOM',
-        description: 'Tài liệu hướng dẫn chi tiết về DOM manipulation',
-        fileName: 'javascript-dom-guide.pdf',
-        fileSize: '2.1 MB',
-        uploadedBy: 'ThS. Nguyễn Văn A',
-        uploadedAt: '2025-04-01',
-        fileType: 'pdf'
-      },
-      {
-        id: 2,
-        title: 'Template HTML mẫu',
-        description: 'File template HTML để bắt đầu làm bài',
-        fileName: 'template.html',
-        fileSize: '0.8 MB',
-        uploadedBy: 'ThS. Nguyễn Văn A',
-        uploadedAt: '2025-04-01',
-        fileType: 'html'
-      }
-    ],
-    submissionFiles: []
-  };
+  // const assignment: Assignment = {
+  //   id: parseInt(assignmentId || '1'),
+  //   title: 'Bài tập 2: JavaScript DOM',
+  //   description: 'Tạo một trang web tương tác sử dụng JavaScript để thao tác DOM. Yêu cầu:\n\n1. Tạo một form đăng ký với validation\n2. Hiển thị danh sách người dùng động\n3. Thêm chức năng tìm kiếm và lọc\n4. Sử dụng Local Storage để lưu trữ dữ liệu\n\nHạn nộp: 20/04/2025\nĐịnh dạng file: .html, .css, .js hoặc .zip',
+  //   dueDate: '2025-04-20',
+  //   submittedDate: null,
+  //   status: 'pending',
+  //   grade: null,
+  //   feedback: null,
+  //   course: 'Lập trình Web',
+  //   documents: [
+  //     {
+  //       id: 1,
+  //       title: 'Hướng dẫn JavaScript DOM',
+  //       description: 'Tài liệu hướng dẫn chi tiết về DOM manipulation',
+  //       fileName: 'javascript-dom-guide.pdf',
+  //       fileSize: '2.1 MB',
+  //       uploadedBy: 'ThS. Nguyễn Văn A',
+  //       uploadedAt: '2025-04-01',
+  //       fileType: 'pdf'
+  //     },
+  //     {
+  //       id: 2,
+  //       title: 'Template HTML mẫu',
+  //       description: 'File template HTML để bắt đầu làm bài',
+  //       fileName: 'template.html',
+  //       fileSize: '0.8 MB',
+  //       uploadedBy: 'ThS. Nguyễn Văn A',
+  //       uploadedAt: '2025-04-01',
+  //       fileType: 'html'
+  //     }
+  //   ],
+  //   submissionFiles: []
+  // };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -97,7 +91,7 @@ const AssignmentDetail = () => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    
+
     // Simulate submission process
     setTimeout(() => {
       console.log('Submitting assignment with:', {
@@ -160,15 +154,15 @@ const AssignmentDetail = () => {
     }
   };
 
-  const isSubmitted = assignment.status === 'submitted' || assignment.status === 'graded';
-  const canSubmit = assignment.status === 'pending' && !isSubmitting;
+  const isSubmitted = assignment?.status === 'submitted' || assignment?.status === 'graded';
+  const canSubmit = assignment?.status === 'pending' && !isSubmitting;
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header with Back Button */}
         <div className="flex items-center space-x-4">
-          <Link 
+          <Link
             to="/dashboard/assignments"
             className="flex items-center text-gray-600 hover:text-gray-900"
           >
@@ -182,16 +176,18 @@ const AssignmentDetail = () => {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
-                {getStatusIcon(assignment.status)}
+                {
+                  getStatusIcon(assignment?.status)
+                }
                 <div>
-                  <CardTitle className="text-2xl">{assignment.title}</CardTitle>
+                  <CardTitle className="text-2xl">{assignment?.title}</CardTitle>
                   <CardDescription className="flex items-center space-x-2 mt-2">
                     <User className="h-4 w-4" />
-                    <span>{assignment.course}</span>
+                    <span>{assignment?.course_id}</span>
                   </CardDescription>
                 </div>
               </div>
-              {getStatusBadge(assignment.status)}
+              {getStatusBadge(assignment?.status)}
             </div>
           </CardHeader>
           <CardContent>
@@ -199,34 +195,34 @@ const AssignmentDetail = () => {
               <div className="md:col-span-2">
                 <h3 className="font-semibold mb-2">Mô tả bài tập</h3>
                 <div className="text-gray-700 whitespace-pre-line bg-gray-50 p-4 rounded-lg">
-                  {assignment.description}
+                  {assignment?.description}
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center text-gray-600">
                     <Calendar className="h-4 w-4 mr-1" />
                     Hạn nộp:
                   </span>
-                  <span className="font-medium">{assignment.dueDate}</span>
+                  <span className="font-medium">{assignment?.due_date}</span>
                 </div>
 
-                {assignment.submittedDate && (
+                {assignment?.submitted && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Ngày nộp:</span>
-                    <span className="font-medium">{assignment.submittedDate}</span>
+                    <span className="font-medium">{assignment?.submitted}</span>
                   </div>
                 )}
 
-                {assignment.grade !== null && (
+                {assignment?.max_score !== null && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Điểm:</span>
-                    <span className="font-medium text-blue-600">{assignment.grade}/10</span>
+                    <span className="font-medium text-blue-600">{assignment?.max_score}/10</span>
                   </div>
                 )}
 
-                {assignment.feedback && (
+                {assignment?.feedback && (
                   <div className="space-y-2">
                     <span className="text-sm text-gray-600">Nhận xét:</span>
                     <div className="text-sm bg-blue-50 p-3 rounded border-l-4 border-blue-500">
@@ -244,22 +240,22 @@ const AssignmentDetail = () => {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Paperclip className="h-5 w-5" />
-              <span>Tài liệu đính kèm ({assignment.documents.length})</span>
+              <span>Tài liệu đính kèm ({assignment?.attachments.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {assignment.documents.length > 0 ? (
+            {assignment?.attachments.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {assignment.documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border">
+                {assignment?.attachments.map((doc) => (
+                  <div key={doc.name} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border">
                     <div className="flex items-center space-x-3">
-                      {getFileIcon(doc.fileType)}
+                      {getFileIcon(doc.name.split('.').pop() || '')}
                       <div>
-                        <p className="font-medium">{doc.title}</p>
+                        <p className="font-medium">{doc.name}</p>
                         <p className="text-sm text-gray-500">
-                          {doc.fileName} • {doc.fileSize}
+                          {doc.name} • {doc.size}
                         </p>
-                        <p className="text-xs text-gray-400">{doc.description}</p>
+                        <p className="text-xs text-gray-400">{doc.type}</p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">
@@ -276,12 +272,12 @@ const AssignmentDetail = () => {
         </Card>
 
         {/* Submission Section */}
-        {!isSubmitted && (
+        {!isSubmitted && user?.role === 'student' && (
           <Card>
             <CardHeader>
               <CardTitle>Nộp bài tập</CardTitle>
               <CardDescription>
-                Hãy nộp bài tập của bạn trước hạn: {assignment.dueDate}
+                Hãy nộp bài tập của bạn trước hạn: {assignment?.due_date}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -374,21 +370,21 @@ const AssignmentDetail = () => {
         )}
 
         {/* Submitted Files (if already submitted) */}
-        {isSubmitted && assignment.submissionFiles && assignment.submissionFiles.length > 0 && (
+        {user?.role === 'teacher' && (
           <Card>
             <CardHeader>
               <CardTitle>Bài đã nộp</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {assignment.submissionFiles.map((file) => (
+                {assignment?.submitted_files.map((file) => (
                   <div key={file.id} className="flex items-center justify-between bg-green-50 p-3 rounded border border-green-200">
                     <div className="flex items-center space-x-3">
-                      {getFileIcon(file.fileType)}
+                      {getFileIcon(file.type)}
                       <div>
-                        <p className="font-medium">{file.fileName}</p>
+                        <p className="font-medium">{file.name}</p>
                         <p className="text-sm text-gray-500">
-                          {file.fileSize} • Nộp lúc: {file.uploadedAt}
+                          {file.size} • Nộp lúc: {file.createdAt}
                         </p>
                       </div>
                     </div>

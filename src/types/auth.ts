@@ -7,6 +7,14 @@ export interface User {
   full_name: string;
   role: UserRole;
   avatar?: string;
+  profile_picture_url?: string;
+  phone_number?: string;
+  date_of_birth?: string;
+  address?: string;
+  gender?: string;
+  bio?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface LoginRequest {

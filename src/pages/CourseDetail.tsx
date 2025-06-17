@@ -50,7 +50,11 @@ const CourseDetail = () => {
   const fetchCourse = async () => {
     try {
       const res = await getApi(`${COURSES_API.GET_BY_ID(courseId)}`);
-      setCourse(res.data);
+      if (res.data) {
+        setCourse(res.data);
+      } else {
+        setCourse(null);
+      }
     } catch (error) {
       console.log('error', error);
     }
@@ -62,18 +66,28 @@ const CourseDetail = () => {
   const fetchCourseDocuments = async () => {
     try {
       const res = await getApi(`${COURSE_DOCUMENT_API.GET_BY_COURSE_ID(courseId)}`);
-      setCourseDocuments(res.data);
+      if (res.data.length > 0) {
+        setCourseDocuments(res.data);
+      } else {
+        setCourseDocuments([]);
+      }
     } catch (error) {
       console.log('error', error);
+      toast.error('Lấy danh sách tài liệu khoá học thất bại')
     }
   };
 
   const fetchCourseAssignments = async () => {
     try {
       const res = await getApi(`${ASSIGNMENTS_API.GET_BY_COURSE_ID(courseId)}`);
-      setCourseAssignments(res.data);
+      if (res.data.length > 0) {
+        setCourseAssignments(res.data);
+      } else {
+        setCourseAssignments([]);
+      }
     } catch (error) {
       console.log('error', error);
+      toast.error('Lấy danh sách bài tập khoá học thất bại')
     }
   };
 

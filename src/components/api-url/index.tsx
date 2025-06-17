@@ -6,6 +6,7 @@ export const AUTH_API = {
 } as const;
 
 export const USERS_API = {
+    GET_BY_ID: (id: string) => `/users/${id}`,
 } as const;
 
 export const COURSES_API = {

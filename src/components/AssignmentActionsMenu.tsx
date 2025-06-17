@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
 import {
@@ -23,7 +22,7 @@ import { deleteApi } from '@/utils/api';
 import { ASSIGNMENTS_API } from './api-url';
 import { Assignment } from '@/types/assignment';
 import { toast } from 'react-hot-toast';
-import { Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface AssignmentActionsMenuProps {
   assignment: Assignment;
@@ -34,6 +33,7 @@ interface AssignmentActionsMenuProps {
 const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignment, onSuccess, courseId }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const navigate = useNavigate();
 
   const handleDelete = async () => {
     await deleteApi(`${ASSIGNMENTS_API.DELETE(assignment.id)}`).then(() => {
@@ -47,8 +47,7 @@ const AssignmentActionsMenu: React.FC<AssignmentActionsMenuProps> = ({ assignmen
   };
 
   const handleView = () => {
-    // Logic xem chi tiết bài tập
-    // navigate to /course/courseId/assignment/assignmentId
+    navigate(`/dashboard/assignments/${assignment.id}`);
   };
 
   return (

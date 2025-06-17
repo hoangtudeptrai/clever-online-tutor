@@ -6,6 +6,7 @@ export interface Assignment {
   content: string;
   due_date: string;
   created_by: string;
+  creator: string;
   status: string;
   max_score: number;
   assignment_status: string;
@@ -13,15 +14,10 @@ export interface Assignment {
   updatedAt: string;
   // attachments: AssignmentDocument[];
   attachments: File[];
-}
-
-export interface AssignmentDocumentForm {
-  title: string;
-  description: string;
-  name: string;
-  file_path: string;
-  file_type: string;
-  file_size: number;
+  submitted: number;
+  total: number;
+  feedback: string;
+  submitted_files: File[];
 }
 
 export interface AssignmentDocument {
@@ -34,6 +30,19 @@ export interface AssignmentDocument {
   file_type: string;
   file_size: number;
   uploadedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignment_id: string;
+  student_id: string;
+  submitted_at: string;
+  grade: number;
+  feedback: string;
+  content: string;
+  status: string;
   createdAt: string;
   updatedAt: string;
 }

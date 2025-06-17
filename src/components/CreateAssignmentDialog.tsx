@@ -229,21 +229,23 @@ const CreateAssignmentDialog: React.FC<CreateAssignmentDialogProps> = ({ onSucce
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              {/* <div>
-                <Label>Khóa học *</Label>
-                <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn khóa học" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div> */}
+              {(!courseId) && (
+                <div>
+                  <Label>Khóa học *</Label>
+                  <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn khóa học" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label htmlFor="due-date">Hạn nộp *</Label>
                 <div className="relative">
@@ -267,6 +269,8 @@ const CreateAssignmentDialog: React.FC<CreateAssignmentDialogProps> = ({ onSucce
                   id="max-grade"
                   type="number"
                   value={formData.max_score}
+                  max={10}
+                  min={0}
                   onChange={(e) => setFormData({ ...formData, max_score: parseInt(e.target.value) })}
                   placeholder="10"
                 />

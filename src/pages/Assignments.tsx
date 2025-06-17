@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, Calendar, User, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Search, Filter, Calendar, User, CheckCircle, Clock, XCircle, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,108 +9,50 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
 import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
-
-interface TeacherAssignment {
-  id: number;
-  title: string;
-  course: string;
-  dueDate: string;
-  submitted: number;
-  total: number;
-  status: string;
-  description: string;
-}
-
-interface StudentAssignment {
-  id: number;
-  title: string;
-  course: string;
-  dueDate: string;
-  submittedDate: string | null;
-  status: string;
-  grade: number | null;
-  description: string;
-}
+import { Assignment, AssignmentSubmission } from '@/types/assignment';
+import { getApi } from '@/utils/api';
+import { ASSIGNMENTS_API } from '@/components/api-url';
+import { toast } from 'react-hot-toast';
+import { USERS_API } from '@/components/api-url';
+import { formatDate } from '@/utils/format';
 
 const Assignments = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
 
-  const teacherAssignments: TeacherAssignment[] = [
-    {
-      id: 1,
-      title: 'Bài tập 1: Cơ bản HTML/CSS',
-      course: 'Lập trình Web',
-      dueDate: '2025-04-15',
-      submitted: 25,
-      total: 30,
-      status: 'active',
-      description: 'Tạo một trang web cơ bản sử dụng HTML và CSS'
-    },
-    {
-      id: 2,
-      title: 'Bài tập 2: JavaScript DOM',
-      course: 'Lập trình Web',
-      dueDate: '2025-04-20',
-      submitted: 18,
-      total: 30,
-      status: 'active',
-      description: 'Thao tác DOM với JavaScript'
-    },
-    {
-      id: 3,
-      title: 'Bài tập 3: React Components',
-      course: 'React Nâng cao',
-      dueDate: '2025-04-10',
-      submitted: 22,
-      total: 25,
-      status: 'completed',
-      description: 'Tạo components React tái sử dụng'
-    },
-    {
-      id: 4,
-      title: 'Bài tập 4: Node.js API',
-      course: 'Node.js Cơ bản',
-      dueDate: '2025-04-25',
-      submitted: 0,
-      total: 20,
-      status: 'draft',
-      description: 'Xây dựng REST API với Node.js'
+  useEffect(() => {
+    if (user?.role === 'teacher') {
+      fetchAssignments();
     }
-  ];
+  }, [user?.role]);
 
-  const studentAssignments: StudentAssignment[] = [
-    {
-      id: 1,
-      title: 'Bài tập 1: Cơ bản HTML/CSS',
-      course: 'Lập trình Web',
-      dueDate: '2025-04-15',
-      submittedDate: '2025-04-12',
-      status: 'submitted',
-      grade: 9.0,
-      description: 'Tạo một trang web cơ bản sử dụng HTML và CSS'
-    },
-    {
-      id: 2,
-      title: 'Bài tập 2: JavaScript DOM',
-      course: 'Lập trình Web',
-      dueDate: '2025-04-20',
-      submittedDate: null,
-      status: 'pending',
-      grade: null,
-      description: 'Thao tác DOM với JavaScript'
-    },
-    {
-      id: 3,
-      title: 'Bài tập 3: React Components',
-      course: 'React Nâng cao',
-      dueDate: '2025-04-10',
-      submittedDate: '2025-04-11',
-      status: 'late',
-      grade: 7.5,
-      description: 'Tạo components React tái sử dụng'
+  // useEffect(() => {
+  //   console.log('assignments', assignments);
+  // }, [assignments]);
+
+  const fetchAssignments = async () => {
+    try {
+      const res = await getApi(ASSIGNMENTS_API.GET_ALL);
+      if (res.data.length > 0) {
+        const promises = res.data.map(async (item: Assignment) => {
+          const creator = await getApi(USERS_API.GET_BY_ID(item.created_by));
+          return {
+            ...item,
+            creator: creator.data.full_name
+          };
+        });
+
+        const assignmentsWithCreators = await Promise.all(promises);
+        setAssignments(assignmentsWithCreators);
+      } else {
+        setAssignments([]);
+      }
+    } catch (error) {
+      console.log('error', error);
+      toast.error('Lỗi khi lấy danh sách bài tập');
     }
-  ];
+  };
 
   const getStatusBadge = (status: string) => {
     if (user?.role === 'teacher') {
@@ -164,11 +106,11 @@ const Assignments = () => {
     }
   };
 
-  const assignments = user?.role === 'teacher' ? teacherAssignments : studentAssignments;
+  // const assignments = user?.role === 'teacher' ? teacherAssignments : studentAssignments;
 
   const filteredAssignments = assignments.filter(assignment =>
     assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assignment.course.toLowerCase().includes(searchTerm.toLowerCase())
+    assignment.course_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -181,13 +123,13 @@ const Assignments = () => {
               {user?.role === 'teacher' ? 'Quản lý bài tập' : 'Bài tập của tôi'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {user?.role === 'teacher' 
+              {user?.role === 'teacher'
                 ? 'Tạo và quản lý bài tập cho học sinh'
                 : 'Theo dõi và nộp bài tập được giao'
               }
             </p>
           </div>
-          {user?.role === 'teacher' && <CreateAssignmentDialog />}
+          {user?.role === 'teacher' && <CreateAssignmentDialog onSuccess={fetchAssignments} courseId={''} />}
         </div>
 
         {/* Search and Filter */}
@@ -220,46 +162,46 @@ const Assignments = () => {
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(assignment.status)}
                     {user?.role === 'teacher' && (
-                      <AssignmentActionsMenu assignment={assignment} />
+                      <AssignmentActionsMenu assignment={assignment} onSuccess={fetchAssignments} courseId={''} />
                     )}
                   </div>
                 </div>
                 <CardDescription className="flex items-center space-x-2">
                   <User className="h-4 w-4" />
-                  <span>{assignment.course}</span>
+                  <span>{assignment.creator}</span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-4">{assignment.description}</p>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="flex items-center text-gray-600">
                       <Calendar className="h-4 w-4 mr-1" />
                       Hạn nộp:
                     </span>
-                    <span className="font-medium">{assignment.dueDate}</span>
+                    <span className="font-medium">{formatDate(assignment.due_date)}</span>
                   </div>
 
                   {user?.role === 'teacher' ? (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Đã nộp:</span>
                       <span className="font-medium">
-                        {(assignment as TeacherAssignment).submitted}/{(assignment as TeacherAssignment).total}
+                        {(assignment as Assignment).submitted}/{(assignment as Assignment).total}
                       </span>
                     </div>
                   ) : (
                     <>
-                      {(assignment as StudentAssignment).submittedDate && (
+                      {(assignment as AssignmentSubmission).submitted_at && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Ngày nộp:</span>
-                          <span className="font-medium">{(assignment as StudentAssignment).submittedDate}</span>
+                          <span className="font-medium">{(assignment as AssignmentSubmission).submitted_at}</span>
                         </div>
                       )}
-                      {(assignment as StudentAssignment).grade && (
+                      {(assignment as AssignmentSubmission).grade && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Điểm:</span>
-                          <span className="font-medium text-blue-600">{(assignment as StudentAssignment).grade}/10</span>
+                          <span className="font-medium text-blue-600">{(assignment as AssignmentSubmission).grade}/10</span>
                         </div>
                       )}
                     </>
@@ -268,12 +210,12 @@ const Assignments = () => {
 
                 <div className="mt-4 pt-4 border-t">
                   <Link to={`/dashboard/assignments/${assignment.id}`}>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full"
                     >
-                      {user?.role === 'teacher' ? 'Xem chi tiết' : 
+                      {user?.role === 'teacher' ? 'Xem chi tiết' :
                         assignment.status === 'pending' ? 'Nộp bài' : 'Xem chi tiết'}
                     </Button>
                   </Link>

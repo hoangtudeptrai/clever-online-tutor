@@ -41,6 +41,7 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
   const [formData, setFormData] = useState<Partial<Assignment>>({
     title: assignment.title,
     description: assignment.description,
+    content: assignment.content,
     course_id: assignment.course_id,
     due_date: assignment.due_date?.split('T')[0], // Format date for input
     max_score: assignment.max_score,
@@ -212,7 +213,10 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
               {!courseId && (
                 <div>
                   <Label>Khóa học *</Label>
-                  <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
+                  <Select
+                    value={formData.course_id}
+                    disabled={true}
+                    onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Chọn khóa học" />
                     </SelectTrigger>
@@ -248,6 +252,8 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
                 <Input
                   id="edit-max-grade"
                   type="number"
+                  max={10}
+                  min={0}
                   value={formData.max_score}
                   onChange={(e) => setFormData({ ...formData, max_score: parseInt(e.target.value) })}
                   placeholder="10"
