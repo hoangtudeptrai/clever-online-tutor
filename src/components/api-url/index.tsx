@@ -6,6 +6,7 @@ export const AUTH_API = {
 } as const;
 
 export const USERS_API = {
+    GET_ALL: '/users',
     GET_BY_ID: (id: string) => `/users/${id}`,
 } as const;
 
@@ -15,6 +16,16 @@ export const COURSES_API = {
     CREATE: '/courses',
     UPDATE: (id: string) => `/courses/${id}`,
     DELETE: (id: string) => `/courses/${id}`
+} as const;
+
+export const COURSE_ENROLLMENTS_API = {
+    GET_ALL: '/enrollments',
+    GET_BY_ID: (id: string) => `/enrollments/${id}`,
+    GET_BY_USER_ID: (user_id: string) => `/enrollments/user/${user_id}`,
+    GET_BY_COURSE_ID: (course_id: string) => `/enrollments/course/${course_id}`,
+    CREATE: '/enrollments',
+    UPDATE: (id: string) => `/enrollments/${id}`,
+    DELETE: (id: string) => `/enrollments/${id}`
 } as const;
 
 export const COURSE_DOCUMENT_API = {

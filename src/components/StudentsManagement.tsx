@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Search, Trash2, Mail, Phone, User, UserCheck } from 'lucide-react';
 import {
   Dialog,
@@ -32,71 +32,118 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { CourseEnrollment } from '@/types/course';
+import { deleteApi, getApi, postApi } from '@/utils/api';
+import { COURSE_ENROLLMENTS_API, USERS_API } from './api-url';
+import { toast } from 'react-hot-toast';
+import { User as UserType } from '@/types/auth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { formatDate } from '@/utils/format';
 
-const StudentsManagement = () => {
+interface StudentsManagementProps {
+  courseId: string;
+}
+
+const StudentsManagement = ({ courseId }: StudentsManagementProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [courseEnrollments, setCourseEnrollments] = useState<CourseEnrollment[]>([]);
+  const [students, setStudents] = useState<UserType[]>([]);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    studentId: '',
-    phone: ''
+    course_id: courseId,
+    student_id: '',
+    status: 'active'
   });
 
-  const students = [
-    {
-      id: 1,
-      name: 'Nguyễn Văn A',
-      email: 'nguyenvana@student.edu.vn',
-      studentId: 'SV001',
-      phone: '0123456789',
-      enrolledDate: '2025-01-15',
-      status: 'active',
-      avatar: '/placeholder.svg'
-    },
-    {
-      id: 2,
-      name: 'Trần Thị B',
-      email: 'tranthib@student.edu.vn',
-      studentId: 'SV002',
-      phone: '0987654321',
-      enrolledDate: '2025-01-16',
-      status: 'active',
-      avatar: '/placeholder.svg'
-    },
-    {
-      id: 3,
-      name: 'Lê Văn C',
-      email: 'levanc@student.edu.vn',
-      studentId: 'SV003',
-      phone: '0165432789',
-      enrolledDate: '2025-01-18',
-      status: 'active',
-      avatar: '/placeholder.svg'
+  useEffect(() => {
+    fetchCourseEnrollments();
+  }, []);
+
+  const fetchCourseEnrollments = async () => {
+    try {
+      const res = await getApi(`${COURSE_ENROLLMENTS_API.GET_BY_COURSE_ID(courseId)}`);
+
+      if (res.data.length > 0) {
+        const students = await Promise.all(res.data.map(async (enrollment: CourseEnrollment) => {
+          const student = await fetchStudentById(enrollment.student_id);
+          return {
+            ...enrollment,
+            full_name: student.full_name,
+            email: student.email,
+            avatar: student.avatar,
+            phone: student.phone,
+          };
+        }));
+        console.log('students', students);
+        setCourseEnrollments(students);
+      } else {
+        setCourseEnrollments([]);
+      }
+    } catch (error) {
+      console.log('error', error);
+      toast.error('Lỗi khi lấy danh sách học sinh');
     }
-  ];
+  }
 
-  const handleAddStudent = (e: React.FormEvent) => {
+  const fetchStudentById = async (studentId: string) => {
+    try {
+      const res = await getApi(`${USERS_API.GET_BY_ID(studentId)}`);
+      return res.data;
+    } catch (error) {
+      console.log('error', error);
+      toast.error('Lỗi khi lấy thông tin học sinh');
+    }
+  }
+
+  const fetchStudents = async () => {
+    try {
+      const res = await getApi(`${USERS_API.GET_ALL}?role=student`);
+      if (res.data.length > 0) {
+        setStudents(res.data);
+      } else {
+        setStudents([]);
+      }
+    } catch (error) {
+      console.log('error', error);
+    }
+  }
+
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Thêm học sinh mới:', formData);
-    // Logic thêm học sinh
-    setShowAddDialog(false);
-    setFormData({ name: '', email: '', studentId: '', phone: '' });
+
+    await postApi(`${COURSE_ENROLLMENTS_API.CREATE}`, {
+      course_id: courseId,
+      student_id: formData.student_id,
+      status: 'enrolled'
+    }).then((res) => {
+      toast.success('Thêm học sinh thành công');
+      fetchCourseEnrollments();
+      setShowAddDialog(false);
+      setFormData({ course_id: courseId, student_id: '', status: 'enrolled' });
+    }).catch((err) => {
+      console.log('err', err);
+      toast.error('Thêm học sinh thất bại');
+    });
   };
 
-  const handleDeleteStudent = () => {
-    console.log('Xóa học sinh:', selectedStudent?.id);
-    // Logic xóa học sinh
-    setShowDeleteDialog(false);
-    setSelectedStudent(null);
+  const handleDeleteStudent = async () => {
+    await deleteApi(`${COURSE_ENROLLMENTS_API.DELETE(selectedStudent.id)}`).then((res) => {
+      toast.success('Xóa học sinh thành công');
+      fetchCourseEnrollments();
+      setShowDeleteDialog(false);
+      setSelectedStudent(null);
+    }).catch((err) => {
+      console.log('err', err);
+      toast.error('Xóa học sinh thất bại');
+    });
   };
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredStudents = courseEnrollments.filter(student =>
+    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+    student.student_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -123,45 +170,27 @@ const StudentsManagement = () => {
             </DialogHeader>
             <form onSubmit={handleAddStudent} className="space-y-4">
               <div>
-                <Label htmlFor="student-name">Họ và tên *</Label>
-                <Input
-                  id="student-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nhập họ và tên"
-                  required
-                />
+                <Label>Học sinh</Label>
+                <Select
+                  value={formData.student_id}
+                  onValueChange={(value) => setFormData({ ...formData, student_id: value })}
+                  onOpenChange={() => {
+                    fetchStudents();
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn học sinh" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {students.map((student) => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.full_name} - {student.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <Label htmlFor="student-email">Email *</Label>
-                <Input
-                  id="student-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Nhập email"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="student-id">Mã sinh viên *</Label>
-                <Input
-                  id="student-id"
-                  value={formData.studentId}
-                  onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                  placeholder="Nhập mã sinh viên"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="student-phone">Số điện thoại</Label>
-                <Input
-                  id="student-phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Nhập số điện thoại"
-                />
-              </div>
+
               <div className="flex justify-end space-x-3">
                 <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
                   Hủy
@@ -195,7 +224,7 @@ const StudentsManagement = () => {
           <CardContent>
             <div className="flex items-center space-x-2">
               <User className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold">{students.length}</span>
+              <span className="text-2xl font-bold">{courseEnrollments.length}</span>
             </div>
           </CardContent>
         </Card>
@@ -206,7 +235,7 @@ const StudentsManagement = () => {
           <CardContent>
             <div className="flex items-center space-x-2">
               <UserCheck className="h-8 w-8 text-green-600" />
-              <span className="text-2xl font-bold">{students.filter(s => s.status === 'active').length}</span>
+              <span className="text-2xl font-bold">{courseEnrollments.filter(s => s.status === 'enrolled').length}</span>
             </div>
           </CardContent>
         </Card>
@@ -233,7 +262,7 @@ const StudentsManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Học sinh</TableHead>
-                <TableHead>Mã SV</TableHead>
+                {/* <TableHead>Mã SV</TableHead> */}
                 <TableHead>Liên hệ</TableHead>
                 <TableHead>Ngày tham gia</TableHead>
                 <TableHead>Trạng thái</TableHead>
@@ -246,16 +275,17 @@ const StudentsManagement = () => {
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <Avatar>
-                        <AvatarImage src={student.avatar} alt={student.name} />
-                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={student.avatar} alt={student.full_name} />
+                        <AvatarFallback>{student.full_name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{student.name}</p>
+                        <p className="font-medium">{student.full_name}</p>
                         <p className="text-sm text-gray-500">{student.email}</p>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono">{student.studentId}</TableCell>
+
+                  {/* <TableCell className="font-mono">{student.student_code}</TableCell> */}
                   <TableCell>
                     <div className="space-y-1">
                       <div className="flex items-center space-x-1 text-sm">
@@ -268,7 +298,7 @@ const StudentsManagement = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{student.enrolledDate}</TableCell>
+                  <TableCell>{formatDate(student.enrolled_at)}</TableCell>
                   <TableCell>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       Đang học
@@ -292,7 +322,15 @@ const StudentsManagement = () => {
             </TableBody>
           </Table>
         </CardContent>
+
+        {filteredStudents.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            Không tìm thấy học sinh nào
+          </div>
+        )}
       </Card>
+
+
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -300,7 +338,7 @@ const StudentsManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa học sinh</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa học sinh "{selectedStudent?.name}" khỏi khóa học? 
+              Bạn có chắc chắn muốn xóa học sinh "{selectedStudent?.name}" khỏi khóa học?
               Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>

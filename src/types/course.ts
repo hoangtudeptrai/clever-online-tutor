@@ -1,3 +1,5 @@
+import { User } from "./auth";
+
 export interface Course {
   id: string;
   title: string;
@@ -53,4 +55,21 @@ export interface StudentCourse {
   rating: number;
   nextLesson: string | null;
   instructor_id: string;
+}
+
+export interface CourseEnrollment {
+	id: string;
+	course_id: string;
+	enrolled_at: string;
+	status: string;
+	last_active: string;
+	progress: number;
+  student_code: string;
+	student_id: string;
+	full_name: string;
+	email: string;
+	avatar: string;
+	phone: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -25,7 +25,12 @@ import { Link } from 'react-router-dom';
 import EditCourseDialog from '@/components/EditCourseDialog';
 import { TeacherCourse } from '@/types/course';
 import { deleteApi, getApi } from '@/utils/api';
-import { ASSIGNMENTS_API, COURSE_DOCUMENT_API, COURSES_API } from '@/components/api-url';
+import {
+  ASSIGNMENTS_API,
+  COURSE_DOCUMENT_API,
+  COURSE_ENROLLMENTS_API,
+  COURSES_API
+} from '@/components/api-url';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'react-hot-toast';
 import { Document } from '@/types/document';
@@ -46,6 +51,18 @@ const CourseDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [courseDocuments, setCourseDocuments] = useState<Document[]>([]);
   const [courseAssignments, setCourseAssignments] = useState<Assignment[]>([]);
+
+  useEffect(() => {
+    fetchCourse();
+    fetchCourseDocuments();
+    fetchCourseAssignments();
+  }, []);
+
+  const onSuccess = () => {
+    fetchCourse();
+    fetchCourseDocuments();
+    fetchCourseAssignments();
+  };
 
   const fetchCourse = async () => {
     try {
@@ -89,18 +106,6 @@ const CourseDetail = () => {
       console.log('error', error);
       toast.error('Lấy danh sách bài tập khoá học thất bại')
     }
-  };
-
-  useEffect(() => {
-    fetchCourse();
-    fetchCourseDocuments();
-    fetchCourseAssignments();
-  }, []);
-
-  const onSuccess = () => {
-    fetchCourse();
-    fetchCourseDocuments();
-    fetchCourseAssignments();
   };
 
   const handleDelete = async () => {
@@ -310,7 +315,7 @@ const CourseDetail = () => {
             </TabsList>
 
             <TabsContent value="students" className="space-y-4">
-              <StudentsManagement />
+              <StudentsManagement courseId={courseId} />
             </TabsContent>
 
             <TabsContent value="lessons" className="space-y-4">
