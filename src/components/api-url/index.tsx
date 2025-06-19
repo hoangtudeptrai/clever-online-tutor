@@ -49,6 +49,7 @@ export const ASSIGNMENTS_API = {
 export const ASSIGNMENT_DOCUMENTS_API = {
     GET_ALL: '/assignment-documents',
     GET_BY_ID: (id: string) => `/assignment-documents/${id}`,
+    GET_BY_ASSIGNMENT_ID: (assignment_id: string) => `/assignment-documents/assignment/${assignment_id}`,
     CREATE: '/assignment-documents',
     UPDATE: (id: string) => `/assignment-documents/${id}`,
     DELETE: (id: string) => `/assignment-documents/${id}`

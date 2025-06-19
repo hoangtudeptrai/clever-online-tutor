@@ -10,14 +10,35 @@ export interface Assignment {
   status: string;
   max_score: number;
   assignment_status: string;
-  createdAt: string;
-  updatedAt: string;
-  // attachments: AssignmentDocument[];
-  attachments: File[];
+  attachments: [
+    {
+      id: string;
+      name: string;
+      file_type: string;
+      file_size: number;
+      file_path: string;
+      uploadedBy: string;
+      createdAt: string;
+      updatedAt: string;
+    }
+  ];
   submitted: number;
   total: number;
   feedback: string;
-  submitted_files: File[];
+  submitted_files: [
+    {
+      id: string;
+      name: string;
+      file_type: string;
+      file_size: number;
+      file_path: string;
+      uploadedBy: string;
+      createdAt: string;
+      updatedAt: string;
+    }
+  ];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AssignmentDocument {

@@ -27,10 +27,6 @@ const Assignments = () => {
     }
   }, [user?.role]);
 
-  // useEffect(() => {
-  //   console.log('assignments', assignments);
-  // }, [assignments]);
-
   const fetchAssignments = async () => {
     try {
       const res = await getApi(ASSIGNMENTS_API.GET_ALL);
