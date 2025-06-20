@@ -23,6 +23,7 @@ const getFileType = (fileName: string) => {
 
 const ViewDocumentDialog: React.FC<ViewDocumentDialogProps> = ({ document, open, onOpenChange }) => {
     const [fileUrl, setFileUrl] = useState<string>('');
+
     const fetchFile = async () => {
         try {
             const response = await getApi(FILES_API.GET_FILE(document.file_name));
@@ -34,7 +35,9 @@ const ViewDocumentDialog: React.FC<ViewDocumentDialogProps> = ({ document, open,
     }
 
     useEffect(() => {
-        fetchFile();
+        if (document) {
+            fetchFile();
+        }
     }, [open]);
 
     const fileType = getFileType(document.file_name || fileUrl);
@@ -42,10 +45,12 @@ const ViewDocumentDialog: React.FC<ViewDocumentDialogProps> = ({ document, open,
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-3xl h-[80vh]">
+
                 <DialogHeader>
                     <DialogTitle>{document.title}</DialogTitle>
                     <DialogDescription>{document.description}</DialogDescription>
                 </DialogHeader>
+
                 <div className="w-full h-full flex items-center justify-center">
                     {fileType === 'image' && (
                         <img src={fileUrl} alt={document.title} className="max-h-[60vh] max-w-full rounded shadow" />

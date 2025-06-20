@@ -332,7 +332,6 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
                 <div className="mt-4 space-y-2">
                   <Label>File mới đã chọn:</Label>
                   {formData.attachments.map((file, index) => {
-                    console.log('file', file);
 
                     return (
                       <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">

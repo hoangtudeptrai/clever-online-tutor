@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Download, Eye, FileText, Video, Image } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,79 +8,35 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import CreateDocumentDialog from '@/components/CreateDocumentDialog';
 import DocumentActionsMenu from '@/components/DocumentActionsMenu';
+import { getApi } from '@/utils/api';
+import { COURSE_DOCUMENT_API } from '@/components/api-url';
+import { toast } from 'react-hot-toast';
+import { Document } from '@/types/document';
+import { formatDate } from '@/utils/format';
 
 const Documents = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [documents, setDocuments] = useState<Document[]>([]);
 
-  const documents = [
-    {
-      id: 1,
-      title: 'Giáo trình HTML cơ bản',
-      type: 'pdf',
-      course: 'Lập trình Web',
-      size: '2.5 MB',
-      downloads: 245,
-      uploadDate: '2025-03-15',
-      description: 'Tài liệu hướng dẫn HTML từ cơ bản đến nâng cao',
-      category: 'Giáo trình'
-    },
-    {
-      id: 2,
-      title: 'Video bài giảng CSS Flexbox',
-      type: 'video',
-      course: 'Lập trình Web',
-      size: '125 MB',
-      downloads: 189,
-      uploadDate: '2025-03-20',
-      description: 'Video hướng dẫn sử dụng CSS Flexbox',
-      category: 'Video bài giảng'
-    },
-    {
-      id: 3,
-      title: 'Slide bài giảng JavaScript',
-      type: 'pptx',
-      course: 'Lập trình Web',
-      size: '8.2 MB',
-      downloads: 167,
-      uploadDate: '2025-03-25',
-      description: 'Slide trình bày về JavaScript ES6+',
-      category: 'Slide'
-    },
-    {
-      id: 4,
-      title: 'Hình ảnh minh họa React Components',
-      type: 'image',
-      course: 'React Nâng cao',
-      size: '1.8 MB',
-      downloads: 98,
-      uploadDate: '2025-04-01',
-      description: 'Sơ đồ minh họa cấu trúc React Components',
-      category: 'Hình ảnh'
-    },
-    {
-      id: 5,
-      title: 'Tài liệu Node.js API',
-      type: 'pdf',
-      course: 'Node.js Cơ bản',
-      size: '4.1 MB',
-      downloads: 134,
-      uploadDate: '2025-04-05',
-      description: 'Hướng dẫn xây dựng API với Node.js và Express',
-      category: 'Tài liệu tham khảo'
-    },
-    {
-      id: 6,
-      title: 'Code mẫu Database Schema',
-      type: 'zip',
-      course: 'Database Design',
-      size: '856 KB',
-      downloads: 67,
-      uploadDate: '2025-04-08',
-      description: 'File code mẫu thiết kế database schema',
-      category: 'Source code'
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      const res = await getApi(COURSE_DOCUMENT_API.GET_ALL);
+      if (res.data) {
+        setDocuments(res.data);
+      }
+      else {
+        setDocuments([]);
+      }
+    } catch (error) {
+      console.log('error', error);
+      toast.error('Lỗi khi lấy tài liệu');
     }
-  ];
+  }
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -105,13 +60,13 @@ const Documents = () => {
 
   const getTypeBadge = (type: string) => {
     const colors = {
-      pdf: 'bg-red-100 text-red-800',
-      video: 'bg-purple-100 text-purple-800',
-      image: 'bg-green-100 text-green-800',
-      pptx: 'bg-orange-100 text-orange-800',
-      zip: 'bg-blue-100 text-blue-800'
+      'application/pdf': 'bg-red-100 text-red-800',
+      'video/mp4': 'bg-purple-100 text-purple-800',
+      'image/jpeg': 'bg-green-100 text-green-800',
+      'image/png': 'bg-orange-100 text-orange-800',
+      'application/zip': 'bg-blue-100 text-blue-800'
     };
-    
+
     return (
       <Badge className={colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
         {type.toUpperCase()}
@@ -135,13 +90,13 @@ const Documents = () => {
               {user?.role === 'teacher' ? 'Quản lý tài liệu' : 'Tài liệu học tập'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {user?.role === 'teacher' 
+              {user?.role === 'teacher'
                 ? 'Tải lên và quản lý tài liệu cho các khóa học'
                 : 'Tải xuống tài liệu học tập từ giảng viên'
               }
             </p>
           </div>
-          {/* {user?.role === 'teacher' && <CreateDocumentDialog courseId={course?.id} onSuccess={onSuccess} />} */}
+          {user?.role === 'teacher' && <CreateDocumentDialog courseId={''} onSuccess={fetchDocuments} />}
         </div>
 
         {/* Search */}
@@ -210,39 +165,39 @@ const Documents = () => {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    {getFileIcon(doc.type)}
+                    {getFileIcon(doc.file_type)}
                     <div>
                       <CardTitle className="text-lg">{doc.title}</CardTitle>
                       <CardDescription>{doc.course}</CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {getTypeBadge(doc.type)}
+                    {getTypeBadge(doc.file_type)}
                     {user?.role === 'teacher' && (
-                      <DocumentActionsMenu document={doc} />
+                      <DocumentActionsMenu document={doc} onSuccess={fetchDocuments} />
                     )}
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-4">{doc.description}</p>
-                
+
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Danh mục:</span>
-                    <span className="font-medium">{doc.category}</span>
+                    <span className="font-medium">{doc.category || 'Không có'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Kích thước:</span>
-                    <span className="font-medium">{doc.size}</span>
+                    <span className="font-medium">{doc.file_size}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Lượt tải:</span>
-                    <span className="font-medium">{doc.downloads}</span>
+                    <span className="font-medium">{doc.download_count || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Ngày tải lên:</span>
-                    <span className="font-medium">{doc.uploadDate}</span>
+                    <span className="font-medium">{formatDate(doc.createdAt)}</span>
                   </div>
                 </div>
 

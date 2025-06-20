@@ -73,7 +73,6 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Cập nhật tài liệu:', formData);
     // Logic cập nhật tài liệu
     const params = {
       ...formData,

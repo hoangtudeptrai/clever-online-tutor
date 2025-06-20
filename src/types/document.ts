@@ -11,4 +11,10 @@ export interface Document {
   uploaded_by: string;
   createdAt: string;
   updatedAt: string;
+  creator: string;
+  category: string;
+  size: number;
+  downloads: number;
+  type: string;
+  course: string;
 }

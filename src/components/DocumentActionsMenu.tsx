@@ -48,7 +48,7 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document: doc
   };
 
   const handleView = () => {
-    // setShowViewDialog(true);
+    setShowViewDialog(true);
   };
 
   const handleDownload = async () => {

@@ -18,6 +18,13 @@ import { COURSE_DOCUMENT_API, COURSES_API, FILES_API } from './api-url';
 import { Course } from '@/types/course';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface CreateDocumentDialogProps {
   courseId: string;
@@ -147,28 +154,64 @@ const CreateDocumentDialog = ({ onSuccess, courseId }: CreateDocumentDialogProps
             />
           </div>
 
+          {(!courseId) && (
+            <div>
+              <Label>Khóa học *</Label>
+              <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn khóa học" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
-            <Label>Tài liệu *</Label>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-center border-2 border-dashed rounded-lg p-6">
-                  <div className="text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="mt-4">
-                      <Label htmlFor="file-upload" className="cursor-pointer">
-                        <span className="text-sm font-medium text-gray-700">Click để tải lên</span>
-                        <Input
-                          id="file-upload"
-                          type="file"
-                          className="hidden"
-                          onChange={handleFileUpload}
-                          required
-                        />
-                      </Label>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">PDF, Word, Excel, hoặc các file khác</p>
+            <Label>File tài liệu mới (tùy chọn)</Label>
+            <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <div className="space-y-2">
+                    <Button type="button" variant="outline" onClick={() => globalThis.document.getElementById('edit-document-file')?.click()}>
+                      Chọn file mới
+                    </Button>
+                    <p className="text-sm text-gray-500">PDF, DOC, PPT, Video, Image lên đến 50MB</p>
+                    {formData.file_name && (
+                      <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
+                        <span>{formData.file_name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setFormData({
+                            ...formData,
+                            file_name: '',
+                            file_path: '',
+                            file_type: '',
+                            file_size: 0,
+                            uploaded_by: ''
+                          })}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
+                <input
+                  id="edit-document-file"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.jpg,.jpeg,.png,.zip"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
               </CardContent>
             </Card>
           </div>
