@@ -17,6 +17,21 @@ export interface User {
   updatedAt?: string;
 }
 
+export interface Student extends User {
+  averageGrade: number;
+  status: string;
+  totalAssignments: number;
+  completedAssignments: number;
+  totalCourses: number;
+  completedCourses: number;
+  totalDocuments: number;
+  completedDocuments: number;
+  totalQuizzes: number;
+  completedQuizzes: number;
+  totalExams: number;
+  lastActivity: string;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;

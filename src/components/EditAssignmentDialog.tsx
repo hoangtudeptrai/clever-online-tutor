@@ -72,13 +72,18 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
   const fetchAssignmentDocument = async () => {
     try {
       const response = await getApi(ASSIGNMENT_DOCUMENTS_API.GET_BY_ASSIGNMENT_ID(assignment.id));
-      // setAssignmentDocument(response.data);
-      setFormData({ ...formData, attachments: response.data });
-      setAttachmentMetadata(response.data.map((doc: AssignmentDocument) => ({
-        title: doc.title,
-        description: doc.description,
-        file: new File([], doc.file_name)
-      })));
+      if (Array.isArray(response.data)) {
+        setAssignmentDocument(response.data);
+        setFormData({ ...formData, attachments: response.data });
+        setAttachmentMetadata(response.data.map((doc: AssignmentDocument) => ({
+          title: doc.title,
+          description: doc.description,
+          file: new File([], doc.file_name)
+        })));
+      } else {
+        // handle error or set empty array
+        setAttachmentMetadata([]);
+      }
     } catch (error) {
       console.error('Error fetching assignment document:', error);
     }

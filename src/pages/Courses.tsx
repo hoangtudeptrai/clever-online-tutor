@@ -46,24 +46,24 @@ const Courses = () => {
   }, []);
 
   const getCourses = async () => {
-  try {
-    const res = await getApi(`${COURSES_API.GET_ALL}`);
+    try {
+      const res = await getApi(`${COURSES_API.GET_ALL}`);
 
-    if (!res?.data) return;
+      if (!res?.data) return;
 
-    const coursesWithThumbnails = await Promise.all(
-      res.data.map(async (course) => {
-        const thumbnail = await getCourseThumbnail(course.thumbnail || '');
-        return { ...course, thumbnail };
-      })
-    );
+      const coursesWithThumbnails = await Promise.all(
+        res.data.map(async (course) => {
+          const thumbnail = await getCourseThumbnail(course.thumbnail || '');
+          return { ...course, thumbnail };
+        })
+      );
 
-    setRow(coursesWithThumbnails);
-  } catch (error) {
-    console.error('Error fetching courses:', error);
-    setRow([]);
-  }
-};
+      setRow(coursesWithThumbnails);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      setRow([]);
+    }
+  };
 
   const getCourseThumbnail = async (thumbnail: string) => {
     if (!thumbnail) return '/placeholder.svg';
@@ -104,10 +104,10 @@ const Courses = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {user?.role === 'teacher' ? 'Quản lý khóa học' : 'Khóa học của tôi'}
+              {user?.role === 'teacher' ? 'Quản lý khoá học' : 'Khoá học của tôi'}
             </h1>
             <p className="text-gray-600 mt-2">
-              {user?.role === 'teacher' 
+              {user?.role === 'teacher'
                 ? 'Tạo và quản lý các khóa học của bạn'
                 : 'Theo dõi tiến độ học tập của bạn'
               }
@@ -132,8 +132,8 @@ const Courses = () => {
           {filteredCourses.map((course) => (
             <Card key={course.id} className="hover:shadow-lg transition-shadow cursor-pointer">
               <div className="aspect-video bg-gray-200 rounded-t-lg">
-                <img 
-                  src={course.thumbnail} 
+                <img
+                  src={course.thumbnail}
                   alt={course.title}
                   className="w-full h-full object-cover rounded-t-lg"
                 />
@@ -195,8 +195,8 @@ const Courses = () => {
                           <span className="font-medium">{course.progress}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
                             style={{ width: `${course.progress}%` }}
                           ></div>
                         </div>
@@ -213,7 +213,7 @@ const Courses = () => {
                     </>
                   )}
 
-                  <Link 
+                  <Link
                     to={`/dashboard/courses/${course.id}`}
                     className="block"
                   >

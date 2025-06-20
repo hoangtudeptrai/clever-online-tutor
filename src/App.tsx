@@ -20,6 +20,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
+import StudentDetail from "./pages/StudentDetail";
 
 const queryClient = new QueryClient();
 
@@ -33,117 +34,125 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/courses" 
+            <Route
+              path="/dashboard/courses"
               element={
                 <ProtectedRoute>
                   <Courses />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/courses/:courseId" 
+            <Route
+              path="/dashboard/courses/:courseId"
               element={
                 <ProtectedRoute>
                   <CourseDetail />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/my-courses" 
+            <Route
+              path="/dashboard/my-courses"
               element={
                 <ProtectedRoute role="student">
                   <Courses />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/my-courses/:courseId" 
+            <Route
+              path="/dashboard/my-courses/:courseId"
               element={
                 <ProtectedRoute role="student">
                   <CourseDetail />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/documents" 
+            <Route
+              path="/dashboard/documents"
               element={
                 <ProtectedRoute>
                   <Documents />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/assignments" 
+            <Route
+              path="/dashboard/assignments"
               element={
                 <ProtectedRoute>
                   <Assignments />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/assignments/:assignmentId" 
+            <Route
+              path="/dashboard/assignments/:assignmentId"
               element={
                 <ProtectedRoute>
                   <AssignmentDetail />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/students" 
+            <Route
+              path="/dashboard/students"
               element={
                 <ProtectedRoute role="teacher">
                   <Students />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/grades" 
+            <Route
+              path="/dashboard/students/:studentId"
+              element={
+                <ProtectedRoute>
+                  <StudentDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/grades"
               element={
                 <ProtectedRoute role="student">
                   <Grades />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/reports" 
+            <Route
+              path="/dashboard/reports"
               element={
                 <ProtectedRoute role="teacher">
                   <Reports />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/notifications" 
+            <Route
+              path="/dashboard/notifications"
               element={
                 <ProtectedRoute>
                   <Notifications />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/profile" 
+            <Route
+              path="/dashboard/profile"
               element={
                 <ProtectedRoute role="student">
                   <Profile />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/settings" 
+            <Route
+              path="/dashboard/settings"
               element={
                 <ProtectedRoute>
                   <Settings />
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route path="*" element={<NotFound />} />
           </Routes>

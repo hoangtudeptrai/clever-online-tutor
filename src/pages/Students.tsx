@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Filter, Mail, Phone, MoreVertical, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,96 +7,31 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DashboardLayout from '@/components/DashboardLayout';
+import { getApi } from '@/utils/api';
+import { USERS_API } from '@/components/api-url';
+import { Student } from '@/types/auth';
+import { Link } from 'react-router-dom';
 
 const Students = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [students, setStudents] = useState<Student[]>([]);
 
-  const students = [
-    {
-      id: 1,
-      name: 'Nguyễn Văn An',
-      email: 'an.nguyen@email.com',
-      phone: '0901234567',
-      studentId: 'SV001',
-      courses: ['Lập trình Web', 'React Nâng cao'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 15,
-      completedAssignments: 12,
-      averageGrade: 8.5,
-      lastActivity: '2025-04-10'
-    },
-    {
-      id: 2,
-      name: 'Trần Thị Bình',
-      email: 'binh.tran@email.com',
-      phone: '0902345678',
-      studentId: 'SV002',
-      courses: ['Lập trình Web', 'Node.js Cơ bản'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 18,
-      completedAssignments: 16,
-      averageGrade: 9.2,
-      lastActivity: '2025-04-12'
-    },
-    {
-      id: 3,
-      name: 'Lê Văn Cường',
-      email: 'cuong.le@email.com',
-      phone: '0903456789',
-      studentId: 'SV003',
-      courses: ['React Nâng cao'],
-      avatar: '/placeholder.svg',
-      status: 'inactive',
-      totalAssignments: 8,
-      completedAssignments: 5,
-      averageGrade: 7.8,
-      lastActivity: '2025-03-28'
-    },
-    {
-      id: 4,
-      name: 'Phạm Thị Dung',
-      email: 'dung.pham@email.com',
-      phone: '0904567890',
-      studentId: 'SV004',
-      courses: ['Lập trình Web', 'Database Design'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 12,
-      completedAssignments: 11,
-      averageGrade: 8.9,
-      lastActivity: '2025-04-11'
-    },
-    {
-      id: 5,
-      name: 'Hoàng Văn Em',
-      email: 'em.hoang@email.com',
-      phone: '0905678901',
-      studentId: 'SV005',
-      courses: ['Node.js Cơ bản'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 10,
-      completedAssignments: 8,
-      averageGrade: 8.1,
-      lastActivity: '2025-04-09'
-    },
-    {
-      id: 6,
-      name: 'Vũ Thị Giang',
-      email: 'giang.vu@email.com',
-      phone: '0906789012',
-      studentId: 'SV006',
-      courses: ['Lập trình Web', 'React Nâng cao', 'Database Design'],
-      avatar: '/placeholder.svg',
-      status: 'active',
-      totalAssignments: 20,
-      completedAssignments: 18,
-      averageGrade: 9.5,
-      lastActivity: '2025-04-12'
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      const res = await getApi(`${USERS_API.GET_ALL}?role=student`);
+      if (res.data.length > 0) {
+        setStudents(res.data);
+      } else {
+        setStudents([]);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
     }
-  ];
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -117,9 +52,9 @@ const Students = () => {
   };
 
   const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+    student.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -206,12 +141,12 @@ const Students = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar>
-                      <AvatarImage src={student.avatar} alt={student.name} />
-                      <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={student.avatar} alt={student.full_name} />
+                      <AvatarFallback>{student.full_name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">{student.name}</CardTitle>
-                      <CardDescription>{student.studentId}</CardDescription>
+                      <CardTitle className="text-lg">{student.full_name}</CardTitle>
+                      <CardDescription>{student.id}</CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -230,17 +165,17 @@ const Students = () => {
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{student.phone}</span>
+                    <span className="text-gray-600">{student.phone_number}</span>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Khóa học đang tham gia:</p>
                     <div className="flex flex-wrap gap-1">
-                      {student.courses.map((course, index) => (
+                      {/* {student.courses.map((course, index) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {course}
                         </Badge>
-                      ))}
+                      ))} */}
                     </div>
                   </div>
 
@@ -265,9 +200,14 @@ const Students = () => {
                   </div>
 
                   <div className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Xem chi tiết
-                    </Button>
+                    <Link
+                      to={`/dashboard/students/${student.id}`}
+                      className="block"
+                    >
+                      <Button variant="outline" size="sm" className="w-full">
+                        Xem chi tiết
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>
