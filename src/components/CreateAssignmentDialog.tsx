@@ -109,10 +109,8 @@ const CreateAssignmentDialog: React.FC<CreateAssignmentDialogProps> = ({ onSucce
     setIsLoading(true);
 
     try {
-      // Format the datetime to include timezone
       const formattedDueDate = formData.due_date ? new Date(formData.due_date).toISOString() : '';
 
-      // First create the assignment
       const assignmentData = {
         ...formData,
         due_date: formattedDueDate,

@@ -80,14 +80,14 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
       uploaded_by: user?.id
     };
     putApi(COURSE_DOCUMENT_API.UPDATE(document.id), params).then(() => {
-      toast.success('Cập nhật tài liệu thành công'); 
+      toast.success('Cập nhật tài liệu thành công');
       onSuccess();
     }).catch((error) => {
       toast.error('Cập nhật tài liệu thất bại');
     });
     onOpenChange(false);
   };
-  
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     try {

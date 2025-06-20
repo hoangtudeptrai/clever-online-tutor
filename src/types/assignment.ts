@@ -10,33 +10,11 @@ export interface Assignment {
   status: string;
   max_score: number;
   assignment_status: string;
-  attachments: [
-    {
-      id: string;
-      name: string;
-      file_type: string;
-      file_size: number;
-      file_path: string;
-      uploadedBy: string;
-      createdAt: string;
-      updatedAt: string;
-    }
-  ];
+  attachments: File[];
   submitted: number;
   total: number;
   feedback: string;
-  submitted_files: [
-    {
-      id: string;
-      name: string;
-      file_type: string;
-      file_size: number;
-      file_path: string;
-      uploadedBy: string;
-      createdAt: string;
-      updatedAt: string;
-    }
-  ];
+  submitted_files: File[];
   createdAt: string;
   updatedAt: string;
 }

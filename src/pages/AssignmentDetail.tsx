@@ -9,9 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { getApi } from '@/utils/api';
-import { ASSIGNMENT_DOCUMENTS_API, ASSIGNMENTS_API } from '@/components/api-url';
+import { ASSIGNMENT_DOCUMENTS_API, ASSIGNMENTS_API, FILES_API, USERS_API } from '@/components/api-url';
 import { Assignment, AssignmentDocument } from '@/types/assignment';
 import { formatDate } from '@/utils/format';
+import { toast } from 'react-hot-toast';
+import axios from 'axios';
 
 const AssignmentDetail = () => {
   const { assignmentId } = useParams();
@@ -34,7 +36,8 @@ const AssignmentDetail = () => {
       const res = await getApi(ASSIGNMENTS_API.GET_BY_ID(assignmentId));
 
       if (res.data) {
-        setAssignment(res.data);
+        const creator = await getApi(USERS_API.GET_BY_ID(res.data.created_by));
+        setAssignment({ ...res.data, creator: creator.data.full_name });
       } else {
         setAssignment(null);
       }
@@ -45,6 +48,7 @@ const AssignmentDetail = () => {
       setLoading(false);
     }
   };
+
 
   const fetchAssignmentDocAttachments = async () => {
     try {
@@ -57,6 +61,33 @@ const AssignmentDetail = () => {
       }
     } catch (error) {
       console.log('error', error);
+    }
+  };
+
+  const handleDownload = async (fileName: string) => {
+    try {
+      const response = await getApi(FILES_API.GET_FILE(fileName));
+      const fileUrl = response?.data?.url;
+
+      const fileResponse = await axios.get(fileUrl, {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(fileResponse.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName || 'download';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Tải xuống tài liệu thành công');
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Tải xuống tài liệu thất bại');
     }
   };
 
@@ -176,7 +207,7 @@ const AssignmentDetail = () => {
                       <CardTitle className="text-2xl">{assignment?.title}</CardTitle>
                       <CardDescription className="flex items-center space-x-2 mt-2">
                         <User className="h-4 w-4" />
-                        <span>{assignment?.course_id}</span>
+                        <span>{assignment?.creator}</span>
                       </CardDescription>
                     </div>
                   </div>
@@ -251,7 +282,7 @@ const AssignmentDetail = () => {
                             <p className="text-xs text-gray-400">{doc.file_type}</p>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleDownload(doc.file_name)}>
                           <Download className="h-4 w-4 mr-1" />
                           Tải xuống
                         </Button>
@@ -372,7 +403,7 @@ const AssignmentDetail = () => {
                   {assignment?.submitted_files?.length > 0 ? (
                     <div className="space-y-3">
                       {assignment?.submitted_files?.map((file) => (
-                        <div key={file.id} className="flex items-center justify-between bg-green-50 p-3 rounded border border-green-200">
+                        <div key={file.name} className="flex items-center justify-between bg-green-50 p-3 rounded border border-green-200">
                           <div className="flex items-center space-x-3">
                             {getFileIcon(file.file_type)}
                             <div>

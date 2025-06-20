@@ -37,8 +37,10 @@ interface EditAssignmentDialogProps {
 const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment, open, onOpenChange, courseId, onSuccess }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [assignmentDocument, setAssignmentDocument] = useState<AssignmentDocument[]>([]);
 
   const [formData, setFormData] = useState<Partial<Assignment>>({
+    id: assignment.id,
     title: assignment.title,
     description: assignment.description,
     content: assignment.content,
@@ -62,7 +64,25 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
     if (!courseId) {
       fetchCourses();
     }
+    if (assignment.id) {
+      fetchAssignmentDocument();
+    }
   }, [open]);
+
+  const fetchAssignmentDocument = async () => {
+    try {
+      const response = await getApi(ASSIGNMENT_DOCUMENTS_API.GET_BY_ASSIGNMENT_ID(assignment.id));
+      // setAssignmentDocument(response.data);
+      setFormData({ ...formData, attachments: response.data });
+      setAttachmentMetadata(response.data.map((doc: AssignmentDocument) => ({
+        title: doc.title,
+        description: doc.description,
+        file: new File([], doc.file_name)
+      })));
+    } catch (error) {
+      console.error('Error fetching assignment document:', error);
+    }
+  }
 
   const fetchCourses = async () => {
     try {
@@ -274,73 +294,81 @@ const EditAssignmentDialog: React.FC<EditAssignmentDialogProps> = ({ assignment,
             </div>
 
             <div>
-              <Label>File đính kèm mới</Label>
-              <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
-                <CardContent className="p-6">
-                  <div className="text-center">
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => document.getElementById('edit-assignment-files')?.click()}
-                        disabled={formData.attachments.length >= 2}
-                      >
-                        Thêm file đính kèm mới
-                      </Button>
-                      <p className="text-sm text-gray-500">
-                        PDF, DOC, Image, ZIP lên đến 20MB mỗi file (Tối đa 2 file)
-                      </p>
-                    </div>
-                  </div>
-                  <input
-                    id="edit-assignment-files"
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </CardContent>
-              </Card>
+              {formData.attachments.length < 2 && (
+                <div>
+                  <Label>File đính kèm mới</Label>
+                  <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
+                    <CardContent className="p-6">
+                      <div className="text-center">
+                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <div className="space-y-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById('edit-assignment-files')?.click()}
+                            disabled={formData.attachments.length >= 2}
+                          >
+                            Thêm file đính kèm mới
+                          </Button>
+                          <p className="text-sm text-gray-500">
+                            PDF, DOC, Image, ZIP lên đến 20MB mỗi file (Tối đa 2 file)
+                          </p>
+                        </div>
+                      </div>
+                      <input
+                        id="edit-assignment-files"
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               {formData.attachments.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <Label>File mới đã chọn:</Label>
-                  {formData.attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div>
-                        <Label htmlFor={`document-title-${index}`}>Tiêu đề tài liệu *</Label>
-                        <Input
-                          id={`document-title-${index}`}
-                          value={attachmentMetadata[index]?.title || ''}
-                          onChange={(e) => updateDocument(index, 'title', e.target.value)}
-                          placeholder="Nhập tiêu đề tài liệu"
-                          required
-                        />
-                      </div>
+                  {formData.attachments.map((file, index) => {
+                    console.log('file', file);
 
-                      <div>
-                        <Label htmlFor={`document-description-${index}`}>Mô tả ngắn *</Label>
-                        <Input
-                          id={`document-description-${index}`}
-                          value={attachmentMetadata[index]?.description || ''}
-                          onChange={(e) => updateDocument(index, 'description', e.target.value)}
-                          placeholder="Mô tả ngắn gọn về tài liệu"
-                          required
-                        />
+                    return (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div>
+                          <Label htmlFor={`document-title-${index}`}>Tiêu đề tài liệu *</Label>
+                          <Input
+                            id={`document-title-${index}`}
+                            value={attachmentMetadata[index]?.title || ''}
+                            onChange={(e) => updateDocument(index, 'title', e.target.value)}
+                            placeholder="Nhập tiêu đề tài liệu"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={`document-description-${index}`}>Mô tả ngắn *</Label>
+                          <Input
+                            id={`document-description-${index}`}
+                            value={attachmentMetadata[index]?.description || ''}
+                            onChange={(e) => updateDocument(index, 'description', e.target.value)}
+                            placeholder="Mô tả ngắn gọn về tài liệu"
+                            required
+                          />
+                        </div>
+                        <span className="text-sm">{file.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeAttachment(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <span className="text-sm">{file.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeAttachment(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
