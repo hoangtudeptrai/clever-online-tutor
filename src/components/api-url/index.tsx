@@ -8,6 +8,7 @@ export const AUTH_API = {
 export const USERS_API = {
     GET_ALL: '/users',
     GET_BY_ID: (id: string) => `/users/${id}`,
+    UPDATE: (id: string) => `/users/${id}`
 } as const;
 
 export const COURSES_API = {
