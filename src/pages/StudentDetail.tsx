@@ -89,7 +89,7 @@ const StudentDetail = () => {
                             <div className="flex items-center space-x-6 mb-6">
                                 <div className="relative">
                                     <Avatar className="h-20 w-20">
-                                        <AvatarImage src="/placeholder.svg" alt={student.full_name} />
+                                        <AvatarImage src={student.profile_picture_url} alt={student.full_name} />
                                         <AvatarFallback className="text-xl">
                                             {student.full_name.charAt(0)}
                                         </AvatarFallback>
