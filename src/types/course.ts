@@ -6,13 +6,12 @@ export interface Course {
   description: string;
   thumbnail?: string;
   duration: string; // in minutes
-//   level: CourseLevel;
-//   status: CourseStatus;
   lessons_count: number;
   students_count: number;
   instructor_id: string;
   created_at: string;
   updated_at: string;
+  instructor: string;
 }
 
 // export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
@@ -29,32 +28,19 @@ export interface CourseBasicInfo {
   students_count: number;
 }
 
-export interface TeacherCourse {
-  id: string;
-  title: string;
-  description: string;
-  lessons_count: number;
-  students_count: number;
+export interface TeacherCourse extends Course {
   progress: number;
   status: string;
-  thumbnail: string;
-  duration: string;
-  instructor_id: string;
 }
 
-export interface StudentCourse {
-  id: string;
-  title: string;
-  description: string;
-  instructor: string;
+export interface StudentCourse extends Course {
   progress: number;
-  lessons: number;
-  completedLessons: number;
   status: string;
-  thumbnail: string;
+  instructor: string;
   rating: number;
   nextLesson: string | null;
-  instructor_id: string;
+  lessons: number;
+  completedLessons: number;
 }
 
 export interface CourseEnrollment {

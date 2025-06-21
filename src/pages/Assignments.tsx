@@ -11,7 +11,7 @@ import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
 import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
 import { Assignment, AssignmentSubmission } from '@/types/assignment';
 import { getApi } from '@/utils/api';
-import { ASSIGNMENTS_API } from '@/components/api-url';
+import { ASSIGNMENTS_API, COURSE_ENROLLMENTS_API } from '@/components/api-url';
 import { toast } from 'react-hot-toast';
 import { USERS_API } from '@/components/api-url';
 import { formatDate } from '@/utils/format';
@@ -20,10 +20,14 @@ const Assignments = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentSubmissions, setAssignmentSubmissions] = useState<AssignmentSubmission[]>([]);
 
   useEffect(() => {
     if (user?.role === 'teacher') {
       fetchAssignments();
+    }
+    if (user?.role === 'student') {
+      fetchStudentAssignments();
     }
   }, [user?.role]);
 
@@ -47,6 +51,25 @@ const Assignments = () => {
     } catch (error) {
       console.log('error', error);
       toast.error('Lỗi khi lấy danh sách bài tập');
+    }
+  };
+
+  const fetchStudentAssignments = async () => {
+    try {
+      // get the course this student has enrolled in => return course_id
+      const course_enrolled = await getApi(COURSE_ENROLLMENTS_API.GET_BY_STUDENT_ID(user?.id));
+
+      // get the assignments by this course_id  => return assignments
+      const assignments_student = await Promise.all(course_enrolled.data.map(async (item: any) => {
+        const res = await getApi(ASSIGNMENTS_API.GET_BY_COURSE_ID(item.course_id));
+        return res.data;
+      }));
+
+      //merge all child elements into a single array
+      const assignmentsArray = assignments_student.flat();
+      setAssignments(assignmentsArray);
+    } catch (error) {
+      console.log('error', error);
     }
   };
 
@@ -188,18 +211,18 @@ const Assignments = () => {
                     </div>
                   ) : (
                     <>
-                      {(assignment as AssignmentSubmission).submitted_at && (
+                      {/* {assignmentSubmission.submitted_at && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Ngày nộp:</span>
-                          <span className="font-medium">{(assignment as AssignmentSubmission).submitted_at}</span>
+                          <span className="font-medium">{assignmentSubmission.submitted_at}</span>
                         </div>
                       )}
-                      {(assignment as AssignmentSubmission).grade && (
+                      {assignmentSubmission.grade && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Điểm:</span>
-                          <span className="font-medium text-blue-600">{(assignment as AssignmentSubmission).grade}/10</span>
+                          <span className="font-medium text-blue-600">{assignmentSubmission.grade}/10</span>
                         </div>
-                      )}
+                      )} */}
                     </>
                   )}
                 </div>

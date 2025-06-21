@@ -24,6 +24,7 @@ import { toast } from 'react-hot-toast';
 import { Document } from '@/types/document';
 import axios from 'axios';
 import ViewDocumentDialog from './ViewDocumentDialog';
+import { handleDownload } from '@/utils/handleFile';
 
 interface DocumentActionsMenuProps {
   document: Document;
@@ -51,34 +52,6 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document: doc
     setShowViewDialog(true);
   };
 
-  const handleDownload = async () => {
-    try {
-      const response = await getApi(FILES_API.GET_FILE(doc.file_name));
-      const fileUrl = response?.data?.url;
-
-      const fileResponse = await axios.get(fileUrl, {
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(fileResponse.data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = doc.file_name || doc.title || 'download';
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      window.URL.revokeObjectURL(url);
-
-
-      toast.success('Tải xuống tài liệu thành công');
-    } catch (error) {
-      console.error('Error downloading document:', error);
-      toast.error('Tải xuống tài liệu thất bại');
-    }
-  };
-
   return (
     <>
       <DropdownMenu>
@@ -92,7 +65,7 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document: doc
             <Eye className="h-4 w-4 mr-2" />
             Xem
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleDownload}>
+          <DropdownMenuItem onClick={() => handleDownload(doc.file_name)}>
             <Download className="h-4 w-4 mr-2" />
             Tải xuống
           </DropdownMenuItem>

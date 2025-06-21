@@ -45,3 +45,15 @@ export interface AssignmentSubmission {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface SubmissionFile {
+  id: string;
+  // file: File;
+  submission_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -29,13 +29,15 @@ import {
   ASSIGNMENTS_API,
   COURSE_DOCUMENT_API,
   COURSE_ENROLLMENTS_API,
-  COURSES_API
+  COURSES_API,
+  FILES_API
 } from '@/components/api-url';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'react-hot-toast';
 import { Document } from '@/types/document';
 import { formatDate } from '@/utils/format';
 import { Assignment } from '@/types/assignment';
+import { handleDownload } from '@/utils/handleFile';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
@@ -520,13 +522,15 @@ const CourseDetail = () => {
                           </div>
 
                           <div className="flex space-x-2 mt-4">
-                            <Button variant="outline" size="sm" className="flex-1">
-                              <Eye className="h-4 w-4 mr-1" />
-                              Xem chi tiết
-                            </Button>
-                            <Button size="sm" className="flex-1">
+                            <Link to={`/dashboard/assignments/${assignment.id}`} className="block w-full">
+                              <Button variant="outline" size="sm" className="w-full">
+                                <Eye className="h-4 w-4 mr-1" />
+                                Xem chi tiết
+                              </Button>
+                            </Link>
+                            {/* <Button size="sm" className="flex-1">
                               Nộp bài
-                            </Button>
+                            </Button> */}
                           </div>
                         </CardContent>
                       </Card>
@@ -588,7 +592,7 @@ const CourseDetail = () => {
                               <Eye className="h-4 w-4 mr-1" />
                               Xem
                             </Button>
-                            <Button size="sm" className="flex-1">
+                            <Button size="sm" className="flex-1" onClick={() => handleDownload(document.file_name)}>
                               <Download className="h-4 w-4 mr-1" />
                               Tải xuống
                             </Button>

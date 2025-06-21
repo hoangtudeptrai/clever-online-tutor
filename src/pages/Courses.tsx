@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Users, BookOpen, Clock, Star } from 'lucide-react';
+import { Search, Users, BookOpen, Clock, Star, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -10,11 +10,12 @@ import DashboardLayout from '@/components/DashboardLayout';
 import CreateCourseDialog from '@/components/CreateCourseDialog';
 import CourseActionsMenu from '@/components/CourseActionsMenu';
 import { getApi } from '@/utils/api';
-import { COURSES_API, FILES_API } from '@/components/api-url';
+import { COURSES_API, FILES_API, USERS_API } from '@/components/api-url';
 import { Course, StudentCourse, TeacherCourse } from '@/types/course';
 
 const Courses = () => {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [row, setRow] = useState<Course[]>([]);
 
@@ -31,7 +32,7 @@ const Courses = () => {
   const studentCourses: StudentCourse[] = row.map(course => ({
     ...course,
     id: course.id,
-    instructor: course.instructor_id || '',
+    instructor: course.instructor || '',
     progress: 0,
     lessons: 0,
     completedLessons: 0,
@@ -42,11 +43,16 @@ const Courses = () => {
   }));
 
   useEffect(() => {
-    getCourses();
+    if (user?.role === 'teacher') {
+      getCourses();
+    } else {
+      fetchStudentCourses();
+    }
   }, []);
 
   const getCourses = async () => {
     try {
+      setLoading(true);
       const res = await getApi(`${COURSES_API.GET_ALL}`);
 
       if (!res?.data) return;
@@ -63,7 +69,49 @@ const Courses = () => {
       console.error('Error fetching courses:', error);
       setRow([]);
     }
+    finally {
+      setLoading(false);
+    }
   };
+
+  const fetchStudentCourses = async () => {
+    try {
+      setLoading(true);
+      // call api get course enrolled by student
+      const res = await getApi(`${COURSES_API.GET_BY_STUDENT_ID(user?.id)}`);
+
+      if (!res?.data) return;
+
+      const coursesWithThumbnails = await Promise.all(
+        res.data.map(async (course) => {
+          const instructor = await fetchTeacherCourses(course.instructor_id);
+          const thumbnail = await getCourseThumbnail(course.thumbnail || '');
+          return {
+            ...course,
+            thumbnail,
+            instructor
+          };
+        })
+      );
+
+      setRow(coursesWithThumbnails);
+    } catch (error) {
+      console.error('Error fetching student courses:', error);
+      setRow([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const fetchTeacherCourses = async (created_by: string) => {
+    try {
+      setLoading(true);
+      const res = await getApi(`${USERS_API.GET_BY_ID(created_by)}`);
+      return res?.data?.full_name;
+    } catch (error) {
+      console.error('Error fetching teacher courses:', error);
+    }
+  }
 
   const getCourseThumbnail = async (thumbnail: string) => {
     if (!thumbnail) return '/placeholder.svg';
@@ -96,6 +144,14 @@ const Courses = () => {
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     course.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return <DashboardLayout>
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    </DashboardLayout>
+  }
 
   return (
     <DashboardLayout>

@@ -8,26 +8,39 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
-import { getApi } from '@/utils/api';
-import { ASSIGNMENT_DOCUMENTS_API, ASSIGNMENTS_API, FILES_API, USERS_API } from '@/components/api-url';
-import { Assignment, AssignmentDocument } from '@/types/assignment';
+import { getApi, postApi } from '@/utils/api';
+import { ASSIGNMENT_DOCUMENTS_API, ASSIGNMENT_SUBMISSION_FILES_API, ASSIGNMENT_SUBMISSIONS_API, ASSIGNMENTS_API, FILES_API, USERS_API } from '@/components/api-url';
+import { Assignment, AssignmentDocument, AssignmentSubmission, SubmissionFile } from '@/types/assignment';
 import { formatDate } from '@/utils/format';
-import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import { handleDownload } from '@/utils/handleFile';
+import toast from 'react-hot-toast';
 
 const AssignmentDetail = () => {
-  const { assignmentId } = useParams();
   const { user } = useAuth();
+  const { assignmentId } = useParams();
+  const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submissionText, setSubmissionText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignment, setAssignment] = useState<Assignment>(null);
   const [assignmentDocument, setAssignmentDocument] = useState<AssignmentDocument[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [assignmentSubmission, setAssignmentSubmission] = useState<AssignmentSubmission[]>([]);
+  const [submissionFiles, setSubmissionFiles] = useState<SubmissionFile[]>([]);
+  const [formData, setFormData] = useState<Partial<AssignmentSubmission>>({
+    assignment_id: '',
+    content: '',
+    feedback: '',
+    grade: 10,
+    status: 'pending',
+    student_id: user?.id,
+  });
 
   useEffect(() => {
     fetchAssignment();
     fetchAssignmentDocAttachments();
+    if (user?.role === 'teacher') {
+      fetchSubmittedAssignments();
+    }
   }, []);
 
   const fetchAssignment = async () => {
@@ -49,7 +62,6 @@ const AssignmentDetail = () => {
     }
   };
 
-
   const fetchAssignmentDocAttachments = async () => {
     try {
       const res = await getApi(ASSIGNMENT_DOCUMENTS_API.GET_BY_ASSIGNMENT_ID(assignmentId));
@@ -64,30 +76,18 @@ const AssignmentDetail = () => {
     }
   };
 
-  const handleDownload = async (fileName: string) => {
+  // get list of submitted assignments 
+  const fetchSubmittedAssignments = async () => {
     try {
-      const response = await getApi(FILES_API.GET_FILE(fileName));
-      const fileUrl = response?.data?.url;
-
-      const fileResponse = await axios.get(fileUrl, {
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(fileResponse.data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName || 'download';
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      window.URL.revokeObjectURL(url);
-
-      toast.success('Tải xuống tài liệu thành công');
+      const res = await getApi(ASSIGNMENT_SUBMISSIONS_API.GET_BY_ASSIGNMENT_ID(assignmentId));
+      if (res.data.length > 0) {
+        setAssignmentSubmission(res.data);
+      }
+      else {
+        setAssignmentSubmission([]);
+      }
     } catch (error) {
-      console.error('Error downloading document:', error);
-      toast.error('Tải xuống tài liệu thất bại');
+      console.log('error', error);
     }
   };
 
@@ -97,24 +97,103 @@ const AssignmentDetail = () => {
   };
 
   const removeFile = (index: number) => {
+    // delete file from selectedFiles by index
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate submission process
-    setTimeout(() => {
-      console.log('Submitting assignment with:', {
-        assignmentId,
-        text: submissionText,
-        files: selectedFiles
+    try {
+      // Validate input
+      if (!selectedFiles.length && !formData.content?.trim()) {
+        toast.error('Vui lòng nhập nội dung hoặc chọn file để nộp');
+        return;
+      }
+
+      // Upload files to server
+      const filePaths = [];
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await postApi(FILES_API.UPLOAD(user?.id), formData);
+
+            if (res.data) {
+              filePaths.push({
+                file_path: res.data.file_path,
+                file_name: res.data.file_name,
+                file_type: res.data.file_type,
+                file_size: res.data.file_size,
+              });
+            }
+          } catch (error) {
+            console.error('Error uploading file:', file.name, error);
+            toast.error(`Lỗi khi upload file: ${file.name}`);
+            throw error;
+          }
+        }
+      }
+
+      // Create assignment submission
+      const submissionData = {
+        assignment_id: assignmentId,
+        content: formData.content || '',
+        student_id: user?.id,
+        status: 'pending',
+      };
+
+      const submissionRes = await postApi(ASSIGNMENT_SUBMISSIONS_API.CREATE, submissionData);
+
+      if (!submissionRes.data?.id) {
+        throw new Error('Không thể tạo submission');
+      }
+
+      // Create assignment submission files
+      if (filePaths.length > 0) {
+        const submissionFilePromises = filePaths.map(async (filePath) => {
+          try {
+            await postApi(ASSIGNMENT_SUBMISSION_FILES_API.CREATE, {
+              submission_id: submissionRes.data.id,
+              file_path: filePath.file_path,
+              file_name: filePath.file_name,
+              file_type: filePath.file_type,
+              file_size: filePath.file_size,
+            });
+          } catch (error) {
+            console.error('Error creating submission file:', error);
+            throw error;
+          }
+        });
+
+        await Promise.all(submissionFilePromises);
+      }
+
+      // Success
+      toast.success('Nộp bài tập thành công!');
+
+      // Reset form
+      setFormData({
+        assignment_id: '',
+        content: '',
+        feedback: '',
+        grade: 10,
+        status: 'pending',
+        student_id: user?.id,
       });
-      setIsSubmitting(false);
-      // Reset form after successful submission
-      setSubmissionText('');
       setSelectedFiles([]);
-    }, 2000);
+
+      // Refresh assignment data
+      await fetchAssignment();
+
+    } catch (error) {
+      console.error('Error submitting assignment:', error);
+      toast.error('Có lỗi xảy ra khi nộp bài tập. Vui lòng thử lại!');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getFileIcon = (fileType: string) => {
@@ -165,7 +244,7 @@ const AssignmentDetail = () => {
     }
   };
 
-  const isSubmitted = assignment?.status === 'submitted' || assignment?.status === 'graded';
+  const isSubmitted = assignment?.status === 'submitted' || assignment?.assignment_status === 'graded';
   const canSubmit = assignment?.status === 'pending' && !isSubmitting;
 
   return (
@@ -296,99 +375,101 @@ const AssignmentDetail = () => {
             </Card>
 
             {/* Submission Section */}
-            {!isSubmitted && user?.role === 'student' && (
+            {user?.role === 'student' && (
               <Card>
                 <CardHeader>
                   <CardTitle>Nộp bài tập</CardTitle>
                   <CardDescription>
-                    Hãy nộp bài tập của bạn trước hạn: {assignment?.due_date}
+                    Hãy nộp bài tập của bạn trước hạn: {formatDate(assignment?.due_date)}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Text Submission */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Ghi chú hoặc mô tả bài làm</label>
-                    <Textarea
-                      placeholder="Nhập ghi chú về bài làm của bạn..."
-                      value={submissionText}
-                      onChange={(e) => setSubmissionText(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-
-                  {/* File Upload */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">File đính kèm</label>
-                      <div>
-                        <Input
-                          id="file-upload"
-                          type="file"
-                          onChange={handleFileSelect}
-                          className="hidden"
-                          multiple
-                          accept=".html,.css,.js,.zip,.rar,.pdf,.doc,.docx"
-                        />
-                        <label htmlFor="file-upload">
-                          <Button variant="outline" className="cursor-pointer" asChild>
-                            <span>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Chọn file
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
+                  <form onSubmit={handleSubmit}>
+                    {/* Text Submission */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Ghi chú hoặc mô tả bài làm</label>
+                      <Textarea
+                        placeholder="Nhập ghi chú về bài làm của bạn..."
+                        value={formData.content}
+                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                        rows={4}
+                      />
                     </div>
 
-                    {/* Selected Files */}
-                    {selectedFiles.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-sm text-gray-600">File đã chọn:</p>
-                        {selectedFiles.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between bg-blue-50 p-3 rounded border">
-                            <div className="flex items-center space-x-2">
-                              {getFileIcon(file.name.split('.').pop() || '')}
-                              <div>
-                                <p className="font-medium text-sm">{file.name}</p>
-                                <p className="text-xs text-gray-500">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFile(index)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
+                    {/* File Upload */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">File đính kèm</label>
+                        <div>
+                          <Input
+                            id="file-upload"
+                            type="file"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                            multiple
+                            accept=".html,.css,.js,.zip,.rar,.pdf,.doc,.docx"
+                          />
+                          <label htmlFor="file-upload">
+                            <Button variant="outline" className="cursor-pointer" asChild>
+                              <span>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Chọn file
+                              </span>
                             </Button>
-                          </div>
-                        ))}
+                          </label>
+                        </div>
                       </div>
-                    )}
 
-                    {/* Submit Button */}
-                    <div className="pt-4 border-t">
-                      <Button
-                        onClick={handleSubmit}
-                        disabled={!canSubmit || (submissionText.trim() === '' && selectedFiles.length === 0)}
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Clock className="h-4 w-4 mr-2 animate-spin" />
-                            Đang nộp bài...
-                          </>
-                        ) : (
+                      {/* Selected Files */}
+                      {selectedFiles.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-600">File đã chọn:</p>
+                          {selectedFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between bg-blue-50 p-3 rounded border">
+                              <div className="flex items-center space-x-2">
+                                {getFileIcon(file.name.split('.').pop() || '')}
+                                <div>
+                                  <p className="font-medium text-sm">{file.name}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFile(index)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Submit Button */}
+                      <div className="pt-4 border-t">
+                        <Button
+                          // disabled={!canSubmit || (submissionText.trim() === '' && selectedFiles.length === 0)}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          {/* {isSubmitting ? (
+                            <>
+                              <Clock className="h-4 w-4 mr-2 animate-spin" />
+                              Đang nộp bài...
+                            </>
+                          ) : (
+                           
+                          )} */}
                           <>
                             <Send className="h-4 w-4 mr-2" />
                             Nộp bài tập
                           </>
-                        )}
-                      </Button>
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  </form>
                 </CardContent>
               </Card>
             )}
@@ -400,14 +481,14 @@ const AssignmentDetail = () => {
                   <CardTitle>Bài đã nộp</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {assignment?.submitted_files?.length > 0 ? (
+                  {submissionFiles?.length > 0 ? (
                     <div className="space-y-3">
-                      {assignment?.submitted_files?.map((file) => (
-                        <div key={file.name} className="flex items-center justify-between bg-green-50 p-3 rounded border border-green-200">
+                      {submissionFiles?.map((file) => (
+                        <div key={file.file_name} className="flex items-center justify-between bg-green-50 p-3 rounded border border-green-200">
                           <div className="flex items-center space-x-3">
                             {getFileIcon(file.file_type)}
                             <div>
-                              <p className="font-medium">{file.name}</p>
+                              <p className="font-medium">{file.file_name}</p>
                               <p className="text-sm text-gray-500">
                                 {file.file_size} • Nộp lúc: {formatDate(file.createdAt)}
                               </p>

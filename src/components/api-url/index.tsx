@@ -13,6 +13,7 @@ export const USERS_API = {
 export const COURSES_API = {
     GET_ALL: '/courses',
     GET_BY_ID: (id: string) => `/courses/${id}`,
+    GET_BY_STUDENT_ID: (student_id: string) => `/courses/enrolled?student_id=${student_id}`,
     CREATE: '/courses',
     UPDATE: (id: string) => `/courses/${id}`,
     DELETE: (id: string) => `/courses/${id}`
@@ -21,7 +22,7 @@ export const COURSES_API = {
 export const COURSE_ENROLLMENTS_API = {
     GET_ALL: '/enrollments',
     GET_BY_ID: (id: string) => `/enrollments/${id}`,
-    GET_BY_USER_ID: (user_id: string) => `/enrollments/user/${user_id}`,
+    GET_BY_STUDENT_ID: (student_id: string) => `/enrollments/student/${student_id}`,
     GET_BY_COURSE_ID: (course_id: string) => `/enrollments/course/${course_id}`,
     CREATE: '/enrollments',
     UPDATE: (id: string) => `/enrollments/${id}`,
@@ -58,6 +59,7 @@ export const ASSIGNMENT_DOCUMENTS_API = {
 export const ASSIGNMENT_SUBMISSIONS_API = {
     GET_ALL: '/assignment-submissions',
     GET_BY_ID: (id: string) => `/assignment-submissions/${id}`,
+    GET_BY_ASSIGNMENT_ID: (assignment_id: string) => `/assignment-submissions/assignment/${assignment_id}`,
     CREATE: '/assignment-submissions',
     UPDATE: (id: string) => `/assignment-submissions/${id}`,
     DELETE: (id: string) => `/assignment-submissions/${id}`
