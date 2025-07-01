@@ -216,41 +216,9 @@ const Students = () => {
                       <span className="text-gray-600">{student.email}</span>
                     </div>
                     
-                    {student.phone_number && (
+                    {student.created_at && (
                       <div className="flex items-center space-x-2 text-sm">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">{student.phone_number}</span>
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Thông tin cơ bản:</p>
-                      <div className="text-sm text-gray-600">
-                        <p>ID: {student.id.slice(0, 8)}...</p>
-                        {student.created_at && (
-                          <p>Tham gia: {new Date(student.created_at).toLocaleDateString('vi-VN')}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {student.address && (
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Địa chỉ:</p>
-                        <p className="text-sm text-gray-600">{student.address}</p>
-                      </div>
-                    )}
-
-                    {student.education && (
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Trường học:</p>
-                        <p className="text-sm text-gray-600">{student.education}</p>
-                      </div>
-                    )}
-
-                    {student.bio && (
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Giới thiệu:</p>
-                        <p className="text-sm text-gray-600 line-clamp-2">{student.bio}</p>
+                        <span className="text-gray-600">Tham gia: {new Date(student.created_at).toLocaleDateString('vi-VN')}</span>
                       </div>
                     )}
 

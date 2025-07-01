@@ -44,13 +44,12 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ formData, onFormDataCha
       </div>
 
       <div>
-        <Label htmlFor="edit-assignment-description">Mô tả ngắn *</Label>
+        <Label htmlFor="edit-assignment-description">Mô tả ngắn</Label>
         <Input
           id="edit-assignment-description"
           value={formData.description}
           onChange={(e) => updateFormData('description', e.target.value)}
           placeholder="Mô tả ngắn gọn về bài tập"
-          required
         />
       </div>
 
