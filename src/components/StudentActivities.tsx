@@ -5,9 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { useStudentActivities } from '@/hooks/useStudentActivities';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 const StudentActivities = () => {
-  const { data: activities, isLoading } = useStudentActivities();
+  const { profile } = useAuth();
+  const { data: activities, isLoading } = useStudentActivities(profile?.id);
   const navigate = useNavigate();
 
   const getActivityIcon = (type: string, status?: string) => {

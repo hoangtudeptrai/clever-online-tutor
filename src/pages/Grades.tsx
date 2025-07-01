@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useStudentGrades } from '@/hooks/useStudentGrades';
+import { useAuth } from '@/hooks/useAuth';
 
 const Grades = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: grades = [], isLoading, error } = useStudentGrades();
+  const { profile } = useAuth();
+  const { data: grades = [], isLoading, error } = useStudentGrades(profile?.id);
 
   const getGradeColor = (grade: number | null) => {
     if (!grade) return 'text-gray-400';
@@ -26,8 +28,8 @@ const Grades = () => {
         return <Badge className="bg-green-100 text-green-800">Đã chấm</Badge>;
       case 'pending':
         return <Badge className="bg-yellow-100 text-yellow-800">Chờ chấm</Badge>;
-      case 'not_submitted':
-        return <Badge className="bg-red-100 text-red-800">Chưa nộp</Badge>;
+      case 'late':
+        return <Badge className="bg-red-100 text-red-800">Nộp muộn</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -195,11 +197,6 @@ const Grades = () => {
                           <span className="font-medium">{formatDate(gradeItem.gradedDate)}</span>
                         </div>
                       )}
-                      {gradeItem.status === 'not_submitted' && (
-                        <div className="text-sm text-red-600">
-                          Bài tập chưa được nộp
-                        </div>
-                      )}
                       {gradeItem.status === 'pending' && (
                         <div className="text-sm text-yellow-600">
                           Đang chờ giảng viên chấm điểm
@@ -217,10 +214,10 @@ const Grades = () => {
                     )}
                   </div>
 
-                  {gradeItem.status === 'not_submitted' && (
+                  {gradeItem.status === 'pending' && (
                     <div className="mt-4 pt-4 border-t">
                       <Button size="sm" className="w-full md:w-auto">
-                        Nộp bài tập
+                        Chờ chấm điểm
                       </Button>
                     </div>
                   )}

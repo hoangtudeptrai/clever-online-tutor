@@ -10,9 +10,14 @@ export interface StudentActivity {
   description: string;
   created_at: string;
   related_id?: string;
+  status?: string;
+  grade?: number;
+  assignment_title?: string;
+  course_title?: string;
+  due_date?: string;
 }
 
-export const useStudentActivities = (studentId: string) => {
+export const useStudentActivities = (studentId?: string) => {
   return useQuery({
     queryKey: ['student-activities', studentId],
     queryFn: async () => {
@@ -28,6 +33,7 @@ export const useStudentActivities = (studentId: string) => {
             id,
             submitted_at,
             status,
+            grade,
             assignments!inner (
               title,
               due_date
@@ -46,7 +52,11 @@ export const useStudentActivities = (studentId: string) => {
               title: `Đã nộp bài tập: ${submission.assignments?.title}`,
               description: `Trạng thái: ${submission.status === 'pending' ? 'Chờ chấm điểm' : submission.status === 'graded' ? 'Đã chấm điểm' : submission.status}`,
               created_at: submission.submitted_at || '',
-              related_id: submission.id
+              related_id: submission.id,
+              status: submission.status,
+              grade: submission.grade,
+              assignment_title: submission.assignments?.title,
+              due_date: submission.assignments?.due_date
             });
           });
         }
@@ -74,7 +84,8 @@ export const useStudentActivities = (studentId: string) => {
               title: `Đăng ký khóa học: ${enrollment.courses?.title}`,
               description: 'Đã tham gia khóa học mới',
               created_at: enrollment.enrolled_at,
-              related_id: enrollment.id
+              related_id: enrollment.id,
+              course_title: enrollment.courses?.title
             });
           });
         }

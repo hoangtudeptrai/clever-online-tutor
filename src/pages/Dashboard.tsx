@@ -23,8 +23,8 @@ const Dashboard = () => {
   // Hooks for new cards
   const { data: courses, isLoading: coursesLoading } = useCourses();
   const { data: recentActivities, isLoading: activitiesLoading } = useRecentActivities();
-  const { data: studentActivities, isLoading: studentActivitiesLoading } = useStudentActivities();
-  const { data: studentGrades, isLoading: gradesLoading } = useStudentGrades();
+  const { data: studentActivities, isLoading: studentActivitiesLoading } = useStudentActivities(profile?.id);
+  const { data: studentGrades, isLoading: gradesLoading } = useStudentGrades(profile?.id);
   const { data: enrolledCourses, isLoading: enrolledCoursesLoading } = useEnrolledCourses();
 
   // Helper to filter submissions needing grading for teacher

@@ -16,16 +16,14 @@ export interface StudentGrade {
   status: 'pending' | 'graded' | 'late';
   grade: number;
   maxGrade: number;
-  assignment?: {
-    title: string;
-    due_date?: string;
-  };
-  course?: {
-    title: string;
-  };
+  assignment: string;
+  course: string;
+  feedback?: string;
+  submittedDate?: string;
+  gradedDate?: string;
 }
 
-export const useStudentGrades = (studentId: string) => {
+export const useStudentGrades = (studentId?: string) => {
   return useQuery({
     queryKey: ['student-grades', studentId],
     queryFn: async () => {
@@ -78,13 +76,11 @@ export const useStudentGrades = (studentId: string) => {
           status: submission.status || 'pending',
           grade: submission.grade || 0,
           maxGrade: submission.assignments?.max_score || 100,
-          assignment: {
-            title: submission.assignments?.title || '',
-            due_date: submission.assignments?.due_date
-          },
-          course: {
-            title: submission.assignments?.courses?.title || ''
-          }
+          assignment: submission.assignments?.title || '',
+          course: submission.assignments?.courses?.title || '',
+          feedback: submission.feedback,
+          submittedDate: submission.submitted_at,
+          gradedDate: submission.graded_at
         })) as StudentGrade[];
       } catch (error) {
         console.error('Error in useStudentGrades:', error);
