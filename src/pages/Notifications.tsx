@@ -6,26 +6,25 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DashboardLayout from '@/components/DashboardLayout';
 import NotificationItem from '@/components/NotificationItem';
-import { useNotifications, useMarkAsRead } from '@/hooks/useNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/useMarkNotificationRead';
 import { useAuth } from '@/hooks/useAuth';
 
 const Notifications = () => {
   const [filter, setFilter] = useState('all');
   const { profile } = useAuth();
   const { data: notifications, isLoading } = useNotifications();
-  const markAsReadMutation = useMarkAsRead();
+  const markAsReadMutation = useMarkNotificationRead();
+  const markAllAsReadMutation = useMarkAllNotificationsRead();
 
   const handleMarkAsRead = (notificationId: string) => {
     markAsReadMutation.mutate(notificationId);
   };
 
   const handleMarkAllAsRead = () => {
-    // Mark all notifications as read
-    notifications?.forEach(notification => {
-      if (!notification.is_read) {
-        markAsReadMutation.mutate(notification.id);
-      }
-    });
+    if (profile?.id) {
+      markAllAsReadMutation.mutate(profile.id);
+    }
   };
 
   const filteredNotifications = notifications?.filter(notification => {
@@ -68,9 +67,9 @@ const Notifications = () => {
             </p>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline" onClick={handleMarkAllAsRead}>
+            <Button variant="outline" onClick={handleMarkAllAsRead} disabled={markAllAsReadMutation.isPending}>
               <Check className="h-4 w-4 mr-2" />
-              Đánh dấu tất cả đã đọc
+              {markAllAsReadMutation.isPending ? 'Đang xử lý...' : 'Đánh dấu tất cả đã đọc'}
             </Button>
           </div>
         </div>

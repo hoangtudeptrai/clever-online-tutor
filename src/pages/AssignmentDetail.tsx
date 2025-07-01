@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, FileText, Calendar, Clock, Edit, Trash2, Save, Eye, Send, BookCheck, ClipboardList } from 'lucide-react';
@@ -248,22 +247,47 @@ const AssignmentDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Tabs */}
           <div className="lg:col-span-2">
-            <Tabs defaultValue={profile?.role === 'tutor' ? 'submissions' : 'instructions'} className="w-full">
+            <Tabs defaultValue={profile?.role === 'tutor' ? 'submissions' : 'details'} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                  {profile?.role === 'tutor' && <TabsTrigger value="submissions">Bài nộp ({submissions.length})</TabsTrigger>}
-                <TabsTrigger value="instructions">Hướng dẫn</TabsTrigger>
+                <TabsTrigger value="details">Chi tiết</TabsTrigger>
                 <TabsTrigger value="files">File đính kèm</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="instructions">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Nội dung bài tập</CardTitle>
-                  </CardHeader>
-                  <CardContent className="prose max-w-none">
-                    <p>{assignment.description}</p>
-                  </CardContent>
-                </Card>
+              <TabsContent value="details">
+                <div className="space-y-4">
+                  {/* Description */}
+                  {assignment.description && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <FileText className="h-5 w-5" />
+                          <span>Mô tả bài tập</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-700 whitespace-pre-wrap">{assignment.description}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Instructions */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <ClipboardList className="h-5 w-5" />
+                        <span>Hướng dẫn chi tiết</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="prose max-w-none">
+                        <p className="text-gray-700 whitespace-pre-wrap">
+                          {assignment.instructions || 'Chưa có hướng dẫn chi tiết cho bài tập này.'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="files">
