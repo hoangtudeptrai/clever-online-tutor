@@ -8,6 +8,7 @@ export interface Assignment {
   id: string;
   title: string;
   description?: string;
+  instructions?: string;
   course_id: string;
   due_date?: string;
   created_by: string;
