@@ -272,21 +272,32 @@ const AssignmentDetail = () => {
                   )}
 
                   {/* Instructions */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <ClipboardList className="h-5 w-5" />
-                        <span>Hướng dẫn chi tiết</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="prose max-w-none">
-                        <p className="text-gray-700 whitespace-pre-wrap">
-                          {assignment.instructions || 'Chưa có hướng dẫn chi tiết cho bài tập này.'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {assignment.instructions && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <ClipboardList className="h-5 w-5" />
+                          <span>Hướng dẫn chi tiết</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="prose max-w-none">
+                          <p className="text-gray-700 whitespace-pre-wrap">
+                            {assignment.instructions}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Show fallback if no instructions */}
+                  {!assignment.instructions && !assignment.description && (
+                    <Card>
+                      <CardContent className="py-8 text-center text-gray-500">
+                        Chưa có mô tả hoặc hướng dẫn cho bài tập này.
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </TabsContent>
 

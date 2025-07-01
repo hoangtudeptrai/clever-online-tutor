@@ -145,9 +145,6 @@ const Assignments = () => {
                         >
                           {assignment.title}
                         </Link>
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {assignment.description || 'Không có mô tả'}
-                        </p>
                       </TableCell>
                       <TableCell>{assignment.course?.title || 'N/A'}</TableCell>
                       <TableCell>
@@ -189,4 +186,3 @@ const Assignments = () => {
 };
 
 export default Assignments;
-
