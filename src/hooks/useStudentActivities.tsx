@@ -1,133 +1,93 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 
 export interface StudentActivity {
   id: string;
-  type: 'assignment_created' | 'assignment_graded' | 'document_uploaded' | 'assignment_due_soon';
+  student_id: string;
+  type: string;
   title: string;
   description: string;
   created_at: string;
-  course_title?: string;
-  assignment_title?: string;
-  grade?: number;
-  due_date?: string;
-  status?: string;
+  related_id?: string;
 }
 
-export const useStudentActivities = (studentId?: string) => {
-  const { profile } = useAuth();
-  const targetStudentId = studentId || profile?.id;
-
+export const useStudentActivities = (studentId: string) => {
   return useQuery({
-    queryKey: ['student-activities', targetStudentId],
+    queryKey: ['student-activities', studentId],
     queryFn: async () => {
-      if (!targetStudentId) return [];
+      if (!studentId) return [];
 
-      // Get recent notifications for the student
-      const { data: notifications, error: notificationsError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', targetStudentId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      try {
+        const activities: StudentActivity[] = [];
 
-      if (notificationsError) throw notificationsError;
-
-      // Get recent assignment submissions
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('assignment_submissions')
-        .select(`
-          *,
-          assignments!inner(title, due_date, course_id, courses!inner(title))
-        `)
-        .eq('student_id', targetStudentId)
-        .order('submitted_at', { ascending: false })
-        .limit(5);
-
-      if (submissionsError) throw submissionsError;
-
-      // Get upcoming assignments
-      const { data: enrolledCourseIdsData, error: enrolledCoursesError } = await supabase
-        .from('course_enrollments')
-        .select('course_id')
-        .eq('student_id', targetStudentId);
-      
-      if (enrolledCoursesError) throw enrolledCoursesError;
-
-      const enrolledCourseIds = enrolledCourseIdsData?.map(c => c.course_id) || [];
-
-      let upcomingAssignments: any[] = [];
-      if (enrolledCourseIds.length > 0) {
-        const { data: assignmentsData, error: upcomingError } = await supabase
-          .from('assignments')
+        // Get recent assignment submissions
+        const { data: submissions, error: submissionsError } = await supabase
+          .from('assignment_submissions')
           .select(`
-            *,
-            courses!inner(title)
+            id,
+            submitted_at,
+            status,
+            assignments!inner (
+              title,
+              due_date
+            )
           `)
-          .in('course_id', enrolledCourseIds)
-          .gte('due_date', new Date().toISOString())
-          .order('due_date', { ascending: true })
-          .limit(3);
+          .eq('student_id', studentId)
+          .order('submitted_at', { ascending: false })
+          .limit(10);
 
-        if (upcomingError) throw upcomingError;
-        upcomingAssignments = assignmentsData || [];
-      }
-
-      const activities: StudentActivity[] = [];
-
-      // Add notifications as activities
-      notifications?.forEach(notification => {
-        activities.push({
-          id: notification.id,
-          type: notification.type as any,
-          title: notification.title,
-          description: notification.content,
-          created_at: notification.created_at,
-        });
-      });
-
-      // Add submission activities
-      submissions?.forEach(submission => {
-        activities.push({
-          id: `submission-${submission.id}`,
-          type: submission.grade !== null ? 'assignment_graded' : 'assignment_created',
-          title: submission.grade !== null ? 'Bài tập đã được chấm điểm' : 'Đã nộp bài tập',
-          description: `${submission.assignments?.title} - ${submission.assignments?.courses?.title}`,
-          created_at: submission.submitted_at || new Date().toISOString(),
-          course_title: submission.assignments?.courses?.title,
-          assignment_title: submission.assignments?.title,
-          grade: submission.grade,
-        });
-      });
-
-      // Add upcoming assignments
-      upcomingAssignments?.forEach(assignment => {
-        const dueDate = new Date(assignment.due_date);
-        const now = new Date();
-        const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (daysUntilDue <= 7) {
-          activities.push({
-            id: `upcoming-${assignment.id}`,
-            type: 'assignment_due_soon',
-            title: 'Bài tập sắp đến hạn',
-            description: `${assignment.title} - ${assignment.courses?.title}`,
-            created_at: assignment.created_at,
-            course_title: assignment.courses?.title,
-            assignment_title: assignment.title,
-            due_date: assignment.due_date,
-            status: daysUntilDue <= 1 ? 'urgent' : 'warning',
+        if (!submissionsError && submissions) {
+          submissions.forEach(submission => {
+            activities.push({
+              id: submission.id,
+              student_id: studentId,
+              type: 'assignment_submitted',
+              title: `Đã nộp bài tập: ${submission.assignments?.title}`,
+              description: `Trạng thái: ${submission.status === 'pending' ? 'Chờ chấm điểm' : submission.status === 'graded' ? 'Đã chấm điểm' : submission.status}`,
+              created_at: submission.submitted_at || '',
+              related_id: submission.id
+            });
           });
         }
-      });
 
-      // Sort all activities by date
-      return activities.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ).slice(0, 8);
+        // Get course enrollments
+        const { data: enrollments, error: enrollmentsError } = await supabase
+          .from('course_enrollments')
+          .select(`
+            id,
+            enrolled_at,
+            courses!inner (
+              title
+            )
+          `)
+          .eq('student_id', studentId)
+          .order('enrolled_at', { ascending: false })
+          .limit(5);
+
+        if (!enrollmentsError && enrollments) {
+          enrollments.forEach(enrollment => {
+            activities.push({
+              id: enrollment.id,
+              student_id: studentId,
+              type: 'course_enrolled',
+              title: `Đăng ký khóa học: ${enrollment.courses?.title}`,
+              description: 'Đã tham gia khóa học mới',
+              created_at: enrollment.enrolled_at,
+              related_id: enrollment.id
+            });
+          });
+        }
+
+        // Sort all activities by date
+        return activities.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ).slice(0, 10);
+      } catch (error) {
+        console.error('Error in useStudentActivities:', error);
+        throw error;
+      }
     },
-    enabled: !!targetStudentId,
+    enabled: !!studentId,
   });
 };
