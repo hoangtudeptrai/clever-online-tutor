@@ -33,7 +33,7 @@ export const useStudents = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, email, phone_number, avatar_url, created_at')
+          .select('id, full_name, email, phone_number, avatar_url, created_at, bio, address, education')
           .eq('role', 'student')
           .order('created_at', { ascending: false });
 
