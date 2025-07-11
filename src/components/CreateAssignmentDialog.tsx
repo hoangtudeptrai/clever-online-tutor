@@ -291,6 +291,9 @@ const CreateAssignmentDialog = ({ courseId }: CreateAssignmentDialogProps) => {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Hủy
             </Button>
+            <Button type="button" variant="secondary">
+              Xem chi tiết
+            </Button>
             <Button 
               type="submit" 
               className="bg-blue-600 hover:bg-blue-700"
