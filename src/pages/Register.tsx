@@ -157,7 +157,7 @@ const Register = () => {
             </div>
             <div className="space-y-3">
               <Label>Vai trò</Label>
-              <RadioGroup value={role} onValueChange={(value) => setRole(value as UserRole)}>
+              <RadioGroup value={role} onValueChange={(value) => setRole(value as UserRole)} className="flex flex-row space-x-6">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="student" id="student" />
                   <Label htmlFor="student">Học sinh</Label>
