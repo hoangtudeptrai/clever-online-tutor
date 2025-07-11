@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-type UserRole = 'student' | 'tutor';
+type UserRole = 'student' | 'tutor' | 'admin';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -157,7 +157,7 @@ const Register = () => {
             </div>
             <div className="space-y-3">
               <Label>Vai trò</Label>
-              <RadioGroup value={role} onValueChange={(value) => setRole(value as UserRole)} className="flex flex-row space-x-6">
+              <RadioGroup value={role} onValueChange={(value) => setRole(value as UserRole)} className="flex flex-row space-x-4">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="student" id="student" />
                   <Label htmlFor="student">Học sinh</Label>
@@ -165,6 +165,10 @@ const Register = () => {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="tutor" id="tutor" />
                   <Label htmlFor="tutor">Giáo viên</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="admin" id="admin" />
+                  <Label htmlFor="admin">Quản trị</Label>
                 </div>
               </RadioGroup>
             </div>
