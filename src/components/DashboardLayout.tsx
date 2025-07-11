@@ -15,7 +15,8 @@ import {
   User,
   GraduationCap,
   ClipboardList,
-  MessageCircle
+  MessageCircle,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -59,7 +60,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: User, label: 'Hồ sơ cá nhân', path: '/dashboard/profile' },
   ];
 
-  const menuItems = profile?.role === 'tutor' ? teacherMenuItems : studentMenuItems;
+  const adminMenuItems = [
+    { icon: Home, label: 'Trang chủ', path: '/dashboard' },
+    { icon: Shield, label: 'Quản trị hệ thống', path: '/dashboard/admin' },
+    { icon: BookOpen, label: 'Quản lý khóa học', path: '/dashboard/courses' },
+    { icon: ClipboardList, label: 'Quản lý bài tập', path: '/dashboard/assignments' },
+    { icon: Users, label: 'Quản lý học sinh', path: '/dashboard/students' },
+    { icon: MessageCircle, label: 'Tin nhắn', path: '/dashboard/messages' },
+    { icon: Bell, label: 'Thông báo', path: '/dashboard/notifications' },
+    { icon: User, label: 'Hồ sơ cá nhân', path: '/dashboard/profile' },
+    { icon: Settings, label: 'Cài đặt', path: '/dashboard/settings' },
+  ];
+
+  const getMenuItems = () => {
+    if (profile?.role === 'admin') return adminMenuItems;
+    if (profile?.role === 'tutor') return teacherMenuItems;
+    return studentMenuItems;
+  };
+
+  const menuItems = getMenuItems();
 
   const handleLogout = async () => {
     await signOut();
@@ -112,7 +131,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     {profile?.full_name}
                   </p>
                   <p className="text-xs text-gray-600">
-                    {profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}
+                    {profile?.role === 'admin' ? 'Quản trị viên' : 
+                     profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -140,8 +160,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           <nav className="mt-6 lg:mt-4 h-full overflow-y-auto pb-20">
             <div className="px-4 mb-6">
               <div className="flex items-center space-x-2 text-xs text-gray-500 uppercase tracking-wider">
-                {profile?.role === 'tutor' ? <GraduationCap className="h-4 w-4" /> : <User className="h-4 w-4" />}
-                <span>{profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}</span>
+                {profile?.role === 'admin' ? <Shield className="h-4 w-4" /> :
+                 profile?.role === 'tutor' ? <GraduationCap className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                <span>
+                  {profile?.role === 'admin' ? 'Quản trị viên' :
+                   profile?.role === 'tutor' ? 'Giáo viên' : 'Học sinh'}
+                </span>
               </div>
             </div>
             
