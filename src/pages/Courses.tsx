@@ -228,7 +228,7 @@ const Courses = () => {
   const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<{ id: string; title: string } | null>(null);
   const { data: courses = [], isLoading, error, refetch } = useCourses();
-  const { data: enrolledCourses = [] } = useEnrolledCourses();
+  const { data: enrolledCourses = [], refetch: refetchEnrolled } = useEnrolledCourses();
   const joinMutation = useJoinCourse();
   const deleteMutation = useDeleteCourse();
   const { toast } = useToast();
@@ -265,6 +265,8 @@ const Courses = () => {
   const handleJoinCourse = async (courseId: string) => {
     try {
       await joinMutation.mutateAsync(courseId);
+      // Refetch enrolled courses after successful join
+      refetchEnrolled();
     } catch (error) {
       // Error handled in mutation
     }

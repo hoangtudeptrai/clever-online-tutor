@@ -12,6 +12,18 @@ export const useJoinCourse = () => {
     mutationFn: async (courseId: string) => {
       if (!profile) throw new Error('User not authenticated');
 
+      // Check if already enrolled
+      const { data: existing } = await supabase
+        .from('course_enrollments')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('student_id', profile.id)
+        .maybeSingle();
+
+      if (existing) {
+        throw new Error('Bạn đã tham gia khóa học này rồi');
+      }
+
       const { data, error } = await supabase
         .from('course_enrollments')
         .insert({
