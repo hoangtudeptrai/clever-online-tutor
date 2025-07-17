@@ -1,12 +1,15 @@
+
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, BookOpen, ClipboardList, Award, Shield } from 'lucide-react';
+import { Users, BookOpen, ClipboardList, Award, Shield, BarChart3, FileText } from 'lucide-react';
 import AdminUsers from '@/components/AdminUsers';
 import AdminCourses from '@/components/AdminCourses';
 import AdminAssignments from '@/components/AdminAssignments';
 import AdminStats from '@/components/AdminStats';
+import AdminReports from '@/components/AdminReports';
+import AdminDetailedStats from '@/components/AdminDetailedStats';
 
 const Admin = () => {
   return (
@@ -25,10 +28,18 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="stats" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="stats" className="flex items-center space-x-2">
               <Award className="h-4 w-4" />
               <span>Thống kê</span>
+            </TabsTrigger>
+            <TabsTrigger value="detailed-stats" className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Thống kê chi tiết</span>
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center space-x-2">
+              <FileText className="h-4 w-4" />
+              <span>Báo cáo</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center space-x-2">
               <Users className="h-4 w-4" />
@@ -46,6 +57,14 @@ const Admin = () => {
 
           <TabsContent value="stats">
             <AdminStats />
+          </TabsContent>
+
+          <TabsContent value="detailed-stats">
+            <AdminDetailedStats />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <AdminReports />
           </TabsContent>
 
           <TabsContent value="users">
