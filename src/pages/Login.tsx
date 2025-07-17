@@ -96,6 +96,13 @@ const Login = () => {
                 </Button>
               </div>
             </div>
+            
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                Quên mật khẩu?
+              </Link>
+            </div>
+            
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
