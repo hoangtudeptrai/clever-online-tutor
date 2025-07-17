@@ -52,7 +52,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const studentMenuItems = [
     { icon: Home, label: 'Trang chủ', path: '/dashboard' },
-    { icon: BookOpen, label: 'Khóa học của tôi', path: '/dashboard/my-courses' },
+    { icon: BookOpen, label: 'Khóa học', path: '/dashboard/courses' },
     { icon: ClipboardList, label: 'Bài tập', path: '/dashboard/assignments' },
     { icon: MessageCircle, label: 'Tin nhắn', path: '/dashboard/messages' },
     { icon: Award, label: 'Điểm số', path: '/dashboard/grades' },
@@ -63,13 +63,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const adminMenuItems = [
     { icon: Home, label: 'Trang chủ', path: '/dashboard' },
     { icon: Shield, label: 'Quản trị hệ thống', path: '/dashboard/admin' },
-    { icon: BookOpen, label: 'Quản lý khóa học', path: '/dashboard/courses' },
-    { icon: ClipboardList, label: 'Quản lý bài tập', path: '/dashboard/assignments' },
-    { icon: Users, label: 'Quản lý học sinh', path: '/dashboard/students' },
-    { icon: MessageCircle, label: 'Tin nhắn', path: '/dashboard/messages' },
-    { icon: Bell, label: 'Thông báo', path: '/dashboard/notifications' },
     { icon: User, label: 'Hồ sơ cá nhân', path: '/dashboard/profile' },
-    { icon: Settings, label: 'Cài đặt', path: '/dashboard/settings' },
   ];
 
   const getMenuItems = () => {

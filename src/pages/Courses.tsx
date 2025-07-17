@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Users, BookOpen, Clock, Star, Loader2, Trash2, FileText } from 'lucide-react';
+import { Search, Users, BookOpen, Clock, Star, Loader2, Trash2, FileText, CheckCircle, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,8 @@ import ManageStudentsDialog from '@/components/ManageStudentsDialog';
 import { useCourses } from '@/hooks/useCourses';
 import { useDeleteCourse } from '@/hooks/useDeleteCourse';
 import { useToast } from '@/hooks/use-toast';
+import { useEnrolledCourses } from '@/hooks/useEnrolledCourses';
+import { useJoinCourse } from '@/hooks/useJoinCourse';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +28,14 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // Component riêng để hiển thị từng course card
-const CourseCard = ({ course }: { course: any }) => {
+const CourseCard = ({ course, enrolledCourses, onJoin, onManageStudents }: { 
+  course: any; 
+  enrolledCourses: any[]; 
+  onJoin: (courseId: string) => void;
+  onManageStudents: (course: { id: string; title: string }) => void;
+}) => {
   const { profile } = useAuth();
+  const isEnrolled = enrolledCourses.some(enrolled => enrolled.id === course.id);
   
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -58,16 +66,22 @@ const CourseCard = ({ course }: { course: any }) => {
             <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
           </Link>
           <div className="flex items-center space-x-2">
-            {course.status === 'published' && (
+            {profile?.role === 'student' && isEnrolled && (
+              <Badge className="bg-green-100 text-green-800">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Đã tham gia
+              </Badge>
+            )}
+            {profile?.role === 'tutor' && course.status === 'published' && (
               <Badge className="bg-green-100 text-green-800">Đã xuất bản</Badge>
             )}
-            {course.status === 'completed' && (
+            {profile?.role === 'tutor' && course.status === 'completed' && (
               <Badge className="bg-blue-100 text-blue-800">Hoàn thành</Badge>
             )}
-            {course.status === 'draft' && (
+            {profile?.role === 'tutor' && course.status === 'draft' && (
               <Badge className="bg-gray-100 text-gray-800">Nháp</Badge>
             )}
-            {!['published', 'completed', 'draft'].includes(course.status) && (
+            {profile?.role === 'tutor' && !['published', 'completed', 'draft'].includes(course.status) && (
               <Badge>{course.status}</Badge>
             )}
             {profile?.role === 'tutor' && (
@@ -119,7 +133,7 @@ const CourseCard = ({ course }: { course: any }) => {
                   className="flex-1"
                   onClick={(e) => {
                     e.preventDefault();
-                    // Handle manage students - will be passed from parent
+                    onManageStudents(course);
                   }}
                 >
                   <Users className="h-4 w-4 mr-2" />
@@ -170,18 +184,35 @@ const CourseCard = ({ course }: { course: any }) => {
                 <span className="font-medium">0%</span>
               </div>
 
-              <Link 
-                to={`/dashboard/courses/${course.id}`}
-                className="block mt-4"
-              >
-                <Button 
-                  variant="default"
-                  size="sm"
-                  className="w-full"
-                >
-                  Vào học
-                </Button>
-              </Link>
+              <div className="flex space-x-2 mt-4">
+                {isEnrolled ? (
+                  <Link 
+                    to={`/dashboard/courses/${course.id}`}
+                    className="flex-1"
+                  >
+                    <Button 
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                    >
+                      Vào học
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onJoin(course.id);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tham gia
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -197,6 +228,8 @@ const Courses = () => {
   const [manageStudentsOpen, setManageStudentsOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<{ id: string; title: string } | null>(null);
   const { data: courses = [], isLoading, error, refetch } = useCourses();
+  const { data: enrolledCourses = [] } = useEnrolledCourses();
+  const joinMutation = useJoinCourse();
   const deleteMutation = useDeleteCourse();
   const { toast } = useToast();
 
@@ -229,6 +262,14 @@ const Courses = () => {
     }
   };
 
+  const handleJoinCourse = async (courseId: string) => {
+    try {
+      await joinMutation.mutateAsync(courseId);
+    } catch (error) {
+      // Error handled in mutation
+    }
+  };
+
   const handleManageStudents = (course: { id: string; title: string }) => {
     setSelectedCourse(course);
     setManageStudentsOpen(true);
@@ -256,12 +297,12 @@ const Courses = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {profile?.role === 'tutor' ? 'Quản lý khóa học' : 'Khóa học của tôi'}
+              {profile?.role === 'tutor' ? 'Quản lý khóa học' : 'Khóa học'}
             </h1>
             <p className="text-gray-600 mt-2">
               {profile?.role === 'tutor' 
                 ? 'Tạo và quản lý các khóa học của bạn'
-                : 'Theo dõi tiến độ học tập của bạn'
+                : 'Khám phá và tham gia các khóa học'
               }
             </p>
           </div>
@@ -299,7 +340,13 @@ const Courses = () => {
               </div>
             ) : (
               filteredCourses.map((course) => (
-                <CourseCard key={course.id} course={course} />
+                <CourseCard 
+                  key={course.id} 
+                  course={course} 
+                  enrolledCourses={enrolledCourses}
+                  onJoin={handleJoinCourse}
+                  onManageStudents={handleManageStudents}
+                />
               ))
             )}
           </div>
