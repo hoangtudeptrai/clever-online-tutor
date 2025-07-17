@@ -118,7 +118,10 @@ const Profile = () => {
                 <CardContent>
                   <div className="space-y-6">
                     <div className="flex items-center space-x-4">
-                      <AvatarUpload />
+                      <AvatarUpload 
+                        currentAvatarUrl={profile?.avatar_url}
+                        userName={profile?.full_name || 'User'}
+                      />
                       <div>
                         <h3 className="font-medium">{profile?.full_name || 'Chưa cập nhật'}</h3>
                         <p className="text-sm text-gray-600">{profile?.email}</p>
