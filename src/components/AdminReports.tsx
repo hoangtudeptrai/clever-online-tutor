@@ -416,7 +416,7 @@ const AdminReports = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Yếu (<6):</span>
+                    <span className="text-sm">Yếu (&lt;6):</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-20 bg-gray-200 rounded-full h-2">
                         <div 
