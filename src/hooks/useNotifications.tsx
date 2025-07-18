@@ -1,27 +1,36 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
+// Helper functions for localStorage
+const getReadNotifications = (): string[] => {
+  try {
+    const stored = localStorage.getItem('read_notifications');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Notification interface
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'assignment_submitted' | 'assignment_graded' | 'assignment_created' | 'course_enrolled' | 'document_uploaded' | 'system';
+  type: 'assignment_submitted' | 'assignment_graded' | 'assignment_created' | 'document_uploaded' | 'course_enrolled' | 'system';
   title: string;
   content: string;
   is_read: boolean;
   created_at: string;
   related_id?: string;
   metadata?: {
-    student_name?: string;
     course_title?: string;
     assignment_title?: string;
     document_title?: string;
     grade?: number;
     submission_id?: string;
     assignment_id?: string;
-    document_id?: string;
-    course_id?: string;
+    feedback?: string;
+    student_name?: string;
   };
 }
 
@@ -32,6 +41,8 @@ export const useNotifications = () => {
     queryKey: ['notifications', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
+
+      const readNotifications = getReadNotifications();
 
       try {
         if (profile.role === 'tutor') {
@@ -78,22 +89,18 @@ export const useNotifications = () => {
             id: `submission_${submission.id}`,
             user_id: profile.id,
             type: submission.grade !== null ? 'assignment_graded' : 'assignment_submitted',
-            title: submission.grade !== null 
-              ? 'Bài tập đã được chấm điểm' 
-              : 'Có bài tập mới được nộp',
-            content: submission.grade !== null
-              ? `Bài tập "${submission.assignment.title}" đã được chấm điểm: ${submission.grade}/100`
-              : `${studentsMap.get(submission.student_id)?.full_name || 'Học sinh'} đã nộp bài tập "${submission.assignment.title}"`,
-            is_read: false,
+            title: submission.grade !== null ? 'Bài tập đã được chấm điểm' : 'Bài tập mới được nộp',
+            content: `${studentsMap.get(submission.student_id)?.full_name} ${submission.grade !== null ? `đã được chấm điểm ${submission.grade}` : 'đã nộp bài tập'} "${submission.assignment?.title}"`,
+            is_read: readNotifications.includes(`submission_${submission.id}`),
             created_at: submission.submitted_at || new Date().toISOString(),
-            related_id: submission.assignment.id,
+            related_id: submission.assignment?.id,
             metadata: {
-              student_name: studentsMap.get(submission.student_id)?.full_name,
-              course_title: submission.assignment.course.title,
-              assignment_title: submission.assignment.title,
+              course_title: submission.assignment?.course?.title,
+              assignment_title: submission.assignment?.title,
               grade: submission.grade,
               submission_id: submission.id,
-              assignment_id: submission.assignment.id
+              assignment_id: submission.assignment?.id,
+              student_name: studentsMap.get(submission.student_id)?.full_name
             }
           }));
 
@@ -119,6 +126,7 @@ export const useNotifications = () => {
               .select(`
                 id,
                 submitted_at,
+                graded_at,
                 status,
                 grade,
                 feedback,
@@ -143,9 +151,9 @@ export const useNotifications = () => {
                     user_id: profile.id,
                     type: 'assignment_graded' as const,
                     title: 'Bài tập đã được chấm điểm',
-                    content: `Bài tập "${submission.assignment?.title}" đã được chấm điểm: ${submission.grade}/100`,
-                    is_read: false,
-                    created_at: submission.submitted_at || new Date().toISOString(),
+                    content: `Bài tập "${submission.assignment?.title}" đã được chấm điểm: ${submission.grade}`,
+                    is_read: readNotifications.includes(`graded_${submission.id}`),
+                    created_at: submission.graded_at || new Date().toISOString(),
                     related_id: submission.assignment?.id,
                     metadata: {
                       course_title: submission.assignment?.course?.title,
@@ -163,7 +171,7 @@ export const useNotifications = () => {
                     type: 'assignment_submitted' as const,
                     title: 'Bài tập đã được nộp',
                     content: `Bạn đã nộp bài tập "${submission.assignment?.title}" thành công`,
-                    is_read: false,
+                    is_read: readNotifications.includes(`submitted_${submission.id}`),
                     created_at: submission.submitted_at || new Date().toISOString(),
                     related_id: submission.assignment?.id,
                     metadata: {
@@ -198,20 +206,19 @@ export const useNotifications = () => {
               .limit(10);
 
             if (!assignmentsError && newAssignments) {
-              const assignmentNotifications = newAssignments.map(assignment => ({
+              const assignmentNotifications: Notification[] = newAssignments.map(assignment => ({
                 id: `assignment_created_${assignment.id}`,
                 user_id: profile.id,
                 type: 'assignment_created' as const,
-                title: 'Bài tập mới được giao',
-                content: `Giáo viên đã giao bài tập mới: "${assignment.title}" trong khóa học "${assignment.course.title}"`,
-                is_read: false,
+                title: 'Bài tập mới',
+                content: `Bài tập mới "${assignment.title}" đã được tạo trong khóa học ${assignment.course?.title}`,
+                is_read: readNotifications.includes(`assignment_created_${assignment.id}`),
                 created_at: assignment.created_at,
                 related_id: assignment.id,
                 metadata: {
+                  course_title: assignment.course?.title,
                   assignment_title: assignment.title,
-                  course_title: assignment.course.title,
-                  assignment_id: assignment.id,
-                  course_id: assignment.course.id
+                  assignment_id: assignment.id
                 }
               }));
               allNotifications.push(...assignmentNotifications);
@@ -236,20 +243,18 @@ export const useNotifications = () => {
               .limit(10);
 
             if (!documentsError && newDocuments) {
-              const documentNotifications = newDocuments.map(document => ({
-                id: `document_uploaded_${document.id}`,
+              const documentNotifications: Notification[] = newDocuments.map(doc => ({
+                id: `document_${doc.id}`,
                 user_id: profile.id,
                 type: 'document_uploaded' as const,
-                title: 'Tài liệu mới được tải lên',
-                content: `Giáo viên đã tải lên tài liệu mới: "${document.title}" trong khóa học "${document.course.title}"`,
-                is_read: false,
-                created_at: document.created_at,
-                related_id: document.id,
+                title: 'Tài liệu mới',
+                content: `Tài liệu mới "${doc.title}" đã được tải lên trong khóa học ${doc.course?.title}`,
+                is_read: readNotifications.includes(`document_${doc.id}`),
+                created_at: doc.created_at,
+                related_id: doc.course?.id,
                 metadata: {
-                  document_title: document.title,
-                  course_title: document.course.title,
-                  document_id: document.id,
-                  course_id: document.course.id
+                  course_title: doc.course?.title,
+                  document_title: doc.title
                 }
               }));
               allNotifications.push(...documentNotifications);
