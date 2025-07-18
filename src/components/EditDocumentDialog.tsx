@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, X } from 'lucide-react';
 import {
   Dialog,
@@ -20,14 +20,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCourses } from '@/hooks/useCourses';
+import { useUpdateDocument } from '@/hooks/useDocuments';
+import { useToast } from '@/hooks/use-toast';
 
 interface EditDocumentDialogProps {
   document: {
-    id: number;
+    id: string;
     title: string;
     description: string;
-    category: string;
-    course: string;
+    file_type: string;
+    file_name: string;
+    file_path: string;
+    course_id: string;
+    course_title: string;
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,34 +41,69 @@ interface EditDocumentDialogProps {
 
 const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open, onOpenChange }) => {
   const [formData, setFormData] = useState({
-    title: document.title,
-    description: document.description,
-    category: document.category,
-    course: document.course,
+    title: '',
+    description: '',
+    file_type: '',
+    course_id: '',
     file: null as File | null
   });
+  
+  const { data: courses = [] } = useCourses();
+  const updateDocument = useUpdateDocument();
+  const { toast } = useToast();
 
-  const courses = [
-    'Lập trình Web',
-    'React Nâng cao',
-    'Node.js Cơ bản',
-    'Database Design'
-  ];
+  // Update form data when document changes
+  useEffect(() => {
+    if (document) {
+      setFormData({
+        title: document.title || '',
+        description: document.description || '',
+        file_type: document.file_type || '',
+        course_id: document.course_id || '',
+        file: null
+      });
+    }
+  }, [document]);
 
   const categories = [
-    'Giáo trình',
-    'Video bài giảng',
-    'Slide',
-    'Hình ảnh',
-    'Tài liệu tham khảo',
-    'Source code'
+    'application/pdf',
+    'video/mp4',
+    'image/jpeg',
+    'image/png',
+    'application/vnd.ms-powerpoint',
+    'application/zip'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const getCategoryLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'application/pdf': 'PDF',
+      'video/mp4': 'Video',
+      'image/jpeg': 'Hình ảnh',
+      'image/png': 'Hình ảnh',
+      'application/vnd.ms-powerpoint': 'Slide',
+      'application/zip': 'Tài liệu nén'
+    };
+    return labels[type] || 'Tài liệu';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Cập nhật tài liệu:', formData);
-    // Logic cập nhật tài liệu
-    onOpenChange(false);
+    
+    try {
+      await updateDocument.mutateAsync({
+        id: document.id,
+        documentData: {
+          title: formData.title,
+          description: formData.description,
+          file_type: formData.file_type,
+          course_id: formData.course_id,
+        }
+      });
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error updating document:', error);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,29 +151,29 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Khóa học *</Label>
-                <Select value={formData.course} onValueChange={(value) => setFormData({ ...formData, course: value })}>
+                <Select value={formData.course_id} onValueChange={(value) => setFormData({ ...formData, course_id: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn khóa học" />
                   </SelectTrigger>
                   <SelectContent>
                     {courses.map((course) => (
-                      <SelectItem key={course} value={course}>
-                        {course}
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Danh mục *</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <Label>Loại file *</Label>
+                <Select value={formData.file_type} onValueChange={(value) => setFormData({ ...formData, file_type: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Chọn danh mục" />
+                    <SelectValue placeholder="Chọn loại file" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
                       <SelectItem key={category} value={category}>
-                        {category}
+                        {getCategoryLabel(category)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -141,7 +182,22 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
             </div>
 
             <div>
-              <Label>File tài liệu mới (tùy chọn)</Label>
+              <Label>File tài liệu hiện tại</Label>
+              <Card className="border border-gray-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <Upload className="h-8 w-8 text-blue-500" />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{document.file_name}</p>
+                      <p className="text-xs text-gray-500">File hiện tại</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div>
+              <Label>Thay đổi file (tùy chọn)</Label>
               <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
                 <CardContent className="p-6">
                   <div className="text-center">
@@ -182,8 +238,8 @@ const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({ document, open,
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Hủy
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              Cập nhật tài liệu
+            <Button type="submit" disabled={updateDocument.isPending} className="bg-blue-600 hover:bg-blue-700">
+              {updateDocument.isPending ? 'Đang cập nhật...' : 'Cập nhật tài liệu'}
             </Button>
           </div>
         </form>

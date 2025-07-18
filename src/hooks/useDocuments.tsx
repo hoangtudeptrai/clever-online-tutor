@@ -128,6 +128,48 @@ export const useCreateDocument = () => {
   });
 };
 
+export const useUpdateDocument = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, documentData }: {
+      id: string;
+      documentData: {
+        title: string;
+        description?: string;
+        file_type?: string;
+        course_id: string;
+      };
+    }) => {
+      const { data, error } = await supabase
+        .from('course_documents')
+        .update(documentData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      toast({
+        title: "Cập nhật thành công",
+        description: "Tài liệu đã được cập nhật",
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating document:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật tài liệu",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 export const useDeleteDocument = () => {
   const queryClient = useQueryClient();
 

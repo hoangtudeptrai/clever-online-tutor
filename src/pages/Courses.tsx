@@ -185,7 +185,7 @@ const CourseCard = ({ course, enrolledCourses, onJoin, onManageStudents }: {
               </div>
 
               <div className="flex space-x-2 mt-4">
-                {isEnrolled ? (
+                {profile?.role === 'student' && isEnrolled ? (
                   <Link 
                     to={`/dashboard/courses/${course.id}`}
                     className="flex-1"
@@ -195,10 +195,10 @@ const CourseCard = ({ course, enrolledCourses, onJoin, onManageStudents }: {
                       size="sm"
                       className="w-full"
                     >
-                      Vào học
+                      Xem chi tiết
                     </Button>
                   </Link>
-                ) : (
+                ) : profile?.role === 'student' ? (
                   <Button 
                     variant="outline"
                     size="sm"
@@ -211,7 +211,7 @@ const CourseCard = ({ course, enrolledCourses, onJoin, onManageStudents }: {
                     <Plus className="h-4 w-4 mr-2" />
                     Tham gia
                   </Button>
-                )}
+                ) : null}
               </div>
             </>
           )}

@@ -25,7 +25,7 @@ export const useEnrolledCourses = () => {
             id,
             title,
             description,
-            instructor:profiles!instructor_id (full_name)
+            instructor_id
           )
         `)
         .eq('student_id', profile.id);
@@ -35,20 +35,22 @@ export const useEnrolledCourses = () => {
         throw error;
       }
 
+      // Get instructor details separately
+      const courseIds = data.map(item => item.courses.id);
+      const { data: instructors } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', data.map(item => item.courses.instructor_id));
+      
       return data.map(item => {
         const courseData = item.courses as any;
-        const instructor = courseData?.instructor;
-        // The type from Supabase can sometimes be an array for a many-to-one relationship.
-        // This handles both cases to be safe.
-        const instructorName = Array.isArray(instructor)
-          ? instructor[0]?.full_name
-          : (instructor as any)?.full_name;
+        const instructor = instructors?.find(i => i.id === courseData.instructor_id);
 
         return {
           id: courseData.id,
           title: courseData.title,
           description: courseData.description,
-          instructor_name: instructorName || 'N/A'
+          instructor_name: instructor?.full_name || 'N/A'
         };
       });
     },

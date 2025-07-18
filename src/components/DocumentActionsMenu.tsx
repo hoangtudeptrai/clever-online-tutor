@@ -81,11 +81,14 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({ document }) =
 
       <EditDocumentDialog
         document={{
-          id: parseInt(document.id),
+          id: document.id,
           title: document.title,
           description: document.description || '',
-          category: document.file_type || 'document',
-          course: document.course?.title || ''
+          file_type: document.file_type || '',
+          file_name: document.file_name,
+          file_path: document.file_path,
+          course_id: document.course_id,
+          course_title: document.course?.title || ''
         }}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}

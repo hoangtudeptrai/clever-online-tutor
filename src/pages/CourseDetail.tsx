@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen, Clock, Edit, Trash2, Plus, FileText, Calendar, Eye, Download, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,8 @@ import { useCourseAssignments } from '@/hooks/useCourseAssignments';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useCourseStudents } from '@/hooks/useStudents';
 import { useToast } from '@/hooks/use-toast';
+import { useJoinCourse } from '@/hooks/useJoinCourse';
+import { useCourseAssignmentSubmissions } from '@/hooks/useCourseAssignmentSubmissions';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
@@ -35,12 +37,15 @@ const CourseDetail = () => {
   const { toast } = useToast();
   const [searchAssignments, setSearchAssignments] = useState('');
   const [searchDocuments, setSearchDocuments] = useState('');
+  const joinCourseMutation = useJoinCourse();
+  const [joining, setJoining] = useState(false);
 
   // Fetch real data from database
   const { data: courses } = useCourses();
   const { data: courseAssignments, isLoading: assignmentsLoading } = useCourseAssignments(courseId || '');
   const { data: documents } = useDocuments();
   const { data: courseStudents } = useCourseStudents(courseId || '');
+  const { data: assignmentSubmissions = [] } = useCourseAssignmentSubmissions(courseId || '');
 
   // Find current course
   const course = courses?.find(c => c.id === courseId);
@@ -53,6 +58,23 @@ const CourseDetail = () => {
   const assignmentsCount = courseAssignments?.length || 0;
   const lessonsCount = course?.lessons_count || 0;
   const avgProgress = courseStudents?.reduce((acc, student) => acc + (student.progress || 0), 0) / (studentsCount || 1) || 0;
+
+  const isStudentEnrolled = profile?.role === 'student' && courseStudents?.some(student => student.id === profile.id);
+
+  const handleJoinCourse = async () => {
+    if (!courseId) return;
+    setJoining(true);
+    try {
+      await joinCourseMutation.mutateAsync(courseId);
+      toast({ title: 'Thành công', description: 'Bạn đã tham gia khóa học!' });
+      // Refetch lại danh sách học sinh để cập nhật giao diện
+      if (typeof window !== 'undefined') window.location.reload(); // hoặc refetch hook nếu có
+    } catch (error) {
+      toast({ title: 'Lỗi', description: 'Không thể tham gia khóa học', variant: 'destructive' });
+    } finally {
+      setJoining(false);
+    }
+  };
 
   // Loading state (nên check cả assignments và students)
   if (assignmentsLoading) {
@@ -148,6 +170,26 @@ const CourseDetail = () => {
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900">{course.title}</h1>
             <p className="text-gray-600 mt-1">{course.description}</p>
+            {/* Nút tham gia cho học sinh */}
+            {profile?.role === 'student' && (
+              <div className="my-4">
+                {isStudentEnrolled ? (
+                  <Badge className="bg-green-100 text-green-800">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Đã tham gia
+                  </Badge>
+                ) : (
+                  <Button
+                    variant="default"
+                    onClick={handleJoinCourse}
+                    disabled={joining}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {joining ? 'Đang tham gia...' : 'Tham gia khóa học'}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           {profile?.role === 'tutor' && (
             <div className="flex space-x-2">
@@ -216,11 +258,12 @@ const CourseDetail = () => {
         {/* Course Management Tabs */}
         {profile?.role === 'tutor' ? (
           <Tabs defaultValue="students" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="students">Học sinh</TabsTrigger>
               <TabsTrigger value="lessons">Bài học</TabsTrigger>
               <TabsTrigger value="assignments">Bài tập ({assignmentsCount})</TabsTrigger>
               <TabsTrigger value="documents">Tài liệu</TabsTrigger>
+              <TabsTrigger value="grades">Bảng điểm</TabsTrigger>
             </TabsList>
             
             <TabsContent value="students" className="space-y-4">
@@ -369,6 +412,59 @@ const CourseDetail = () => {
                       {searchDocuments ? 'Không tìm thấy tài liệu nào' : 'Chưa có tài liệu nào'}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="grades" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Bảng điểm sinh viên</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Họ tên</TableHead>
+                          {courseAssignments?.map(a => (
+                            <TableHead key={a.id}>{a.title}</TableHead>
+                          ))}
+                          <TableHead>Điểm TB</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {courseStudents?.map(student => {
+                          let total = 0;
+                          let count = 0;
+                          return (
+                            <TableRow key={student.id}>
+                              <TableCell>{student.full_name}</TableCell>
+                              {courseAssignments?.map(a => {
+                                // Tìm submissions của assignment này
+                                const assignmentSub = assignmentSubmissions.find(as => as.assignment_id === a.id);
+                                const submission = assignmentSub?.submissions.find(s => s.student_id === student.id);
+                                let cell = null;
+                                if (!submission) {
+                                  cell = <span className="text-gray-400">Chưa nộp</span>;
+                                } else if (submission.grade !== undefined && submission.grade !== null) {
+                                  cell = <span className="font-bold text-green-700">{submission.grade}</span>;
+                                  total += submission.grade;
+                                  count++;
+                                } else {
+                                  cell = <span className="text-yellow-600">Chờ chấm</span>;
+                                }
+                                return <TableCell key={a.id + student.id}>{cell}</TableCell>;
+                              })}
+                              <TableCell>
+                                {count > 0 ? (total / count).toFixed(1) : '-'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

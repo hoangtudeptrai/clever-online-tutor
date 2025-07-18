@@ -15,6 +15,7 @@ import { useStudentActivities } from '@/hooks/useStudentActivities';
 import { useStudentGrades } from '@/hooks/useStudentGrades';
 import { Badge } from '@/components/ui/badge';
 import { useEnrolledCourses } from '@/hooks/useEnrolledCourses';
+import { useUpcomingAssignments } from '@/hooks/useUpcomingAssignments';
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const { data: studentActivities, isLoading: studentActivitiesLoading } = useStudentActivities(profile?.id);
   const { data: studentGrades, isLoading: gradesLoading } = useStudentGrades(profile?.id);
   const { data: enrolledCourses, isLoading: enrolledCoursesLoading } = useEnrolledCourses();
+  const { data: upcomingAssignments, isLoading: upcomingAssignmentsLoading } = useUpcomingAssignments();
 
   // Helper to filter submissions needing grading for teacher
   const assignmentsToGrade = React.useMemo(() => 
@@ -33,11 +35,7 @@ const Dashboard = () => {
       (activity) => activity.type === 'submission' && (activity.grade === null || activity.grade === undefined)
     ) || [], [recentActivities]);
 
-  // Helper to filter upcoming assignments for student
-  const upcomingAssignments = React.useMemo(() => 
-    studentActivities?.filter(
-      (activity) => activity.type === 'assignment_due_soon'
-    ) || [], [studentActivities]);
+  // Use upcoming assignments directly from the hook
 
   // Helper to get recent grades for student
   const recentGrades = React.useMemo(() =>
@@ -316,29 +314,31 @@ const Dashboard = () => {
                      <CardDescription>Đừng quên hoàn thành đúng hạn</CardDescription>
                   </CardHeader>
                   <CardContent>
-                     {studentActivitiesLoading ? (
+                   {upcomingAssignmentsLoading ? (
                        <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div>
                      ) : (
                        <div className="space-y-3">
-                         {upcomingAssignments.slice(0, 3).map(activity => (
-                           <Link to="/dashboard/assignments" key={activity.id} className="block p-3 rounded-lg hover:bg-gray-50 border transition-colors">
+                         {upcomingAssignments?.slice(0, 3).map(assignment => (
+                           <Link to="/dashboard/assignments" key={assignment.id} className="block p-3 rounded-lg hover:bg-gray-50 border transition-colors">
                              <div className="flex justify-between items-center">
-                               <h4 className="font-semibold truncate">{activity.assignment_title}</h4>
-                               {activity.status === 'urgent' 
+                               <h4 className="font-semibold truncate">{assignment.title}</h4>
+                               {assignment.urgency_status === 'urgent' 
                                  ? <Badge variant="destructive">Khẩn cấp</Badge>
-                                 : <Badge className="bg-orange-100 text-orange-800">Sắp đến hạn</Badge>
+                                 : assignment.urgency_status === 'soon'
+                                 ? <Badge className="bg-orange-100 text-orange-800">Sắp đến hạn</Badge>
+                                 : <Badge variant="outline">Bình thường</Badge>
                                }
                              </div>
-                             <p className="text-sm text-gray-500 truncate">Khóa học: {activity.course_title}</p>
-                             {activity.due_date && <p className="text-xs text-gray-500">Hạn nộp: {new Date(activity.due_date).toLocaleDateString('vi-VN')}</p>}
+                             <p className="text-sm text-gray-500 truncate">Khóa học: {assignment.course_title}</p>
+                             {assignment.due_date && <p className="text-xs text-gray-500">Hạn nộp: {new Date(assignment.due_date).toLocaleDateString('vi-VN')}</p>}
                            </Link>
                          ))}
-                         {upcomingAssignments.length > 0 && (
+                         {upcomingAssignments && upcomingAssignments.length > 3 && (
                           <Link to="/dashboard/assignments" className="block mt-4">
                             <Button variant="outline" className="w-full">Xem tất cả bài tập <ArrowRight className="ml-2 h-4 w-4" /></Button>
                           </Link>
                         )}
-                        {upcomingAssignments.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Không có bài tập nào sắp tới.</p>}
+                        {(!upcomingAssignments || upcomingAssignments.length === 0) && <p className="text-sm text-gray-500 text-center py-4">Không có bài tập nào sắp tới.</p>}
                        </div>
                      )}
                   </CardContent>

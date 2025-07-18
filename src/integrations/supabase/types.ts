@@ -62,6 +62,13 @@ export type Database = {
             referencedRelation: "assignments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "assignment_documents_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "upcoming_assignments_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       assignment_submission_files: {
@@ -142,6 +149,13 @@ export type Database = {
             columns: ["assignment_id"]
             isOneToOne: false
             referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "upcoming_assignments_view"
             referencedColumns: ["id"]
           },
         ]
@@ -378,6 +392,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grades_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "upcoming_assignments_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "grades_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
@@ -599,7 +620,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      upcoming_assignments_view: {
+        Row: {
+          course_id: string | null
+          course_title: string | null
+          due_date: string | null
+          id: string | null
+          student_id: string | null
+          title: string | null
+          urgency_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_access_submission: {

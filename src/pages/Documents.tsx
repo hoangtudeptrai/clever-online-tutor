@@ -9,13 +9,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import CreateDocumentDialog from '@/components/CreateDocumentDialog';
 import DocumentActionsMenu from '@/components/DocumentActionsMenu';
-import { useDocuments } from '@/hooks/useDocuments';
+import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments';
 import { useToast } from '@/hooks/use-toast';
 
 const Documents = () => {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const { data: documents = [], isLoading, error } = useDocuments();
+  const downloadMutation = useDownloadDocument();
   const { toast } = useToast();
 
   const getFileIcon = (type: string) => {
@@ -67,19 +68,7 @@ const Documents = () => {
   };
 
   const handleDownload = async (document: any) => {
-    try {
-      // In a real implementation, you would download from Supabase Storage
-      toast({
-        title: "Tải xuống",
-        description: `Đang tải xuống ${document.title}...`,
-      });
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải xuống file",
-        variant: "destructive",
-      });
-    }
+    downloadMutation.mutate(document);
   };
 
   const filteredDocuments = documents.filter(doc =>
@@ -262,6 +251,7 @@ const Documents = () => {
                           size="sm" 
                           className="flex-1"
                           onClick={() => handleDownload(doc)}
+                          disabled={downloadMutation.isPending}
                         >
                           <Download className="h-4 w-4 mr-1" />
                           Tải xuống
