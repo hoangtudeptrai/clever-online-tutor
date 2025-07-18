@@ -74,8 +74,7 @@ export const useMarkAllNotificationsRead = () => {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      // Get all current notifications to mark them as read
-      const queryClient = useQueryClient();
+      // Dùng queryClient từ scope ngoài
       const notifications = queryClient.getQueryData(['notifications']) as any[];
       
       if (notifications) {
@@ -97,7 +96,8 @@ export const useMarkAllNotificationsRead = () => {
       // Invalidate notifications and unread counts
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
-      
+      // Force refetch notifications to update localStorage-based UI
+      queryClient.refetchQueries({ queryKey: ['notifications'] });
       toast({
         title: "Thành công",
         description: "Đã đánh dấu tất cả thông báo là đã đọc",
