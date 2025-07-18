@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useMarkNotificationRead } from '@/hooks/useMarkNotificationRead';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -22,9 +23,16 @@ interface NotificationDropdownProps {
 
 const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ unreadCount }) => {
   const { data: notifications } = useNotifications();
+  const markAsReadMutation = useMarkNotificationRead();
 
   // Get only the first 5 notifications for dropdown
   const recentNotifications = notifications?.slice(0, 5) || [];
+
+  const handleNotificationClick = (notificationId: string, isRead: boolean) => {
+    if (!isRead) {
+      markAsReadMutation.mutate(notificationId);
+    }
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -77,7 +85,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ unreadCount
         {recentNotifications && recentNotifications.length > 0 ? (
           <>
             {recentNotifications.map((notification) => (
-              <DropdownMenuItem key={notification.id} className="flex items-start space-x-3 p-3">
+              <DropdownMenuItem 
+                key={notification.id} 
+                className="flex items-start space-x-3 p-3 cursor-pointer"
+                onClick={() => handleNotificationClick(notification.id, notification.is_read)}
+              >
                 <div className="text-lg">{getNotificationIcon(notification.type)}</div>
                 <div className="flex-1 space-y-1">
                   <p className={`text-sm font-medium ${!notification.is_read ? 'text-blue-600' : 'text-gray-900'}`}>

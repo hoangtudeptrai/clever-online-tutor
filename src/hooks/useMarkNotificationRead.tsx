@@ -9,9 +9,13 @@ export const useMarkNotificationRead = () => {
 
   return useMutation({
     mutationFn: async (notificationId: string) => {
-      // Since we're using computed notifications (not stored in DB), 
-      // we just return success. In a real implementation, you'd store read status separately
-      return Promise.resolve();
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+      return { success: true };
     },
     onSuccess: () => {
       // Invalidate notifications and unread counts
@@ -35,9 +39,14 @@ export const useMarkAllNotificationsRead = () => {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      // Since we're using computed notifications (not stored in DB), 
-      // we just return success. In a real implementation, you'd store read status separately
-      return Promise.resolve();
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+
+      if (error) throw error;
+      return { success: true };
     },
     onSuccess: () => {
       // Invalidate notifications and unread counts

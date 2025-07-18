@@ -26,12 +26,31 @@ import CreateAssignmentDialog from '@/components/CreateAssignmentDialog';
 import AssignmentActionsMenu from '@/components/AssignmentActionsMenu';
 import { useAssignments } from '@/hooks/useAssignments';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Assignments = () => {
   const { profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { data: assignments, isLoading } = useAssignments();
+
+  // Get submission status for students
+  const { data: submissions } = useQuery({
+    queryKey: ['student-submissions', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id || profile.role !== 'student') return [];
+      
+      const { data, error } = await supabase
+        .from('assignment_submissions')
+        .select('assignment_id, status, submitted_at, grade')
+        .eq('student_id', profile.id);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id && profile.role === 'student'
+  });
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -49,6 +68,34 @@ const Assignments = () => {
     return (
       <Badge className={colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
         {labels[status as keyof typeof labels] || status}
+      </Badge>
+    );
+  };
+
+  const getSubmissionStatusBadge = (assignmentId: string) => {
+    const submission = submissions?.find(s => s.assignment_id === assignmentId);
+    
+    if (!submission) {
+      return <Badge variant="outline">Chưa nộp</Badge>;
+    }
+    
+    const colors = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      submitted: 'bg-blue-100 text-blue-800',
+      graded: 'bg-green-100 text-green-800',
+      late: 'bg-red-100 text-red-800'
+    };
+    
+    const labels = {
+      pending: 'Chờ chấm điểm',
+      submitted: 'Đã nộp',
+      graded: 'Đã chấm điểm',
+      late: 'Nộp muộn'
+    };
+    
+    return (
+      <Badge className={colors[submission.status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+        {labels[submission.status as keyof typeof labels] || submission.status}
       </Badge>
     );
   };
@@ -127,10 +174,11 @@ const Assignments = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%]">Tiêu đề</TableHead>
+                  <TableHead className="w-[30%]">Tiêu đề</TableHead>
                   <TableHead>Khóa học</TableHead>
                   <TableHead>Hạn nộp</TableHead>
                   <TableHead>Trạng thái</TableHead>
+                  {profile?.role === 'student' && <TableHead>Tình trạng nộp bài</TableHead>}
                   <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
@@ -153,6 +201,11 @@ const Assignments = () => {
                       <TableCell>
                         {getStatusBadge(assignment.assignment_status || 'draft')}
                       </TableCell>
+                      {profile?.role === 'student' && (
+                        <TableCell>
+                          {getSubmissionStatusBadge(assignment.id)}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         {profile?.role === 'tutor' ? (
                           <AssignmentActionsMenu assignment={assignment} />
@@ -169,7 +222,7 @@ const Assignments = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={profile?.role === 'student' ? 6 : 5} className="h-24 text-center">
                       {searchQuery
                         ? 'Không tìm thấy bài tập nào phù hợp.'
                         : 'Chưa có bài tập nào.'}
